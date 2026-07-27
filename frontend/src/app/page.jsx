@@ -73,22 +73,6 @@ export default function HomePage() {
   const [searchQuery, setSearchQuery] = useState('');
   const [publishToast, setPublishToast] = useState('');
 
-  useEffect(() => {
-    if (typeof window !== 'undefined') {
-      const params = new URLSearchParams(window.location.search);
-      const q = params.get('search') || params.get('q') || '';
-      setSearchQuery(q);
-
-      if (params.get('published') === 'true') {
-        setPublishToast('Blog published successfully!');
-        window.history.replaceState({}, '', '/#blogs');
-        setTimeout(() => {
-          setPublishToast('');
-        }, 4000);
-      }
-    }
-  }, []);
-
   const handleOpenAuthModal = (mode = 'login', msg = '', redirectUrl = '') => {
     setAuthModalMode(mode);
     setAuthModalMessage(msg);
@@ -110,7 +94,7 @@ export default function HomePage() {
   const loadBlogs = useCallback(async (showLoading = true) => {
     if (showLoading) setLoading(true);
     const queryCategory = (activeCategory === 'All' || !activeCategory) ? null : activeCategory;
-    const res = await fetchBlogsApi(queryCategory, page, 50);
+    const res = await fetchBlogsApi(queryCategory, page, 100);
     if (res && res.success && Array.isArray(res.data)) {
       setBlogs(res.data);
       if (res.categoryCounts) {
@@ -126,6 +110,24 @@ export default function HomePage() {
     }
     if (showLoading) setLoading(false);
   }, [activeCategory, page]);
+
+  useEffect(() => {
+    if (typeof window !== 'undefined') {
+      const params = new URLSearchParams(window.location.search);
+      const q = params.get('search') || params.get('q') || '';
+      setSearchQuery(q);
+
+      if (params.get('published') === 'true') {
+        setActiveCategory('All');
+        setSearchQuery('');
+        setPublishToast('🎉 Blog published successfully!');
+        window.history.replaceState({}, '', '/#blogs');
+        setTimeout(() => {
+          setPublishToast('');
+        }, 5000);
+      }
+    }
+  }, []);
 
   useEffect(() => {
     loadBlogs(true);
