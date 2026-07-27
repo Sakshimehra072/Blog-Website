@@ -8,7 +8,7 @@ const {
 
 async function getBlogs(req, res) {
   try {
-    const { category, page = 1, limit = 20 } = req.query;
+    const { category, page = 1, limit = 100 } = req.query;
     const blogs = await getBlogsFromDb({ category, page, limit });
     const categoryCounts = await getCategoryCountsFromDb();
     
