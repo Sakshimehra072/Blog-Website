@@ -1,8 +1,6 @@
 const express = require('express');
 const router = express.Router();
 const {
-  sendOtpController,
-  verifyOtpController,
   registerController,
   loginController,
   googleLoginController,
@@ -11,11 +9,7 @@ const {
 } = require('../controllers/authController');
 const authMiddleware = require('../middleware/authMiddleware');
 
-// Mobile OTP Routes (Twilio)
-router.post('/send-otp', sendOtpController);
-router.post('/verify-otp', verifyOtpController);
-
-// Manual Auth Routes
+// User Authentication Routes (Email + Password)
 router.post('/register', registerController);
 router.post('/login', loginController);
 

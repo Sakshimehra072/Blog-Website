@@ -5,27 +5,31 @@ import LikeButton from './LikeButton';
 import CommentButton from './CommentButton';
 import ShareButton from './ShareButton';
 import FavouriteButton from './FavouriteButton';
-import { ArrowRight, User } from 'lucide-react';
 
 export default function BlogCard({ blog }) {
-  const post = blog || {
-    id: 1,
-    title: "Building High-Performance Full Stack Web Apps in 2026",
-    excerpt: "Explore the modern architecture patterns, optimization techniques, and responsive design systems that power lightning-fast web applications.",
-    category: "Technology",
-    author: {
-      name: "Sarah Jenkins",
-      avatar: "https://images.unsplash.com/photo-1494790108377-be9c29b29330?w=150&auto=format&fit=crop&q=80"
-    },
-    coverImage: "https://images.unsplash.com/photo-1555066931-4365d14bab8c?w=800&auto=format&fit=crop&q=80",
-    likes: 142,
-    comments: 28
-  };
+  if (!blog) return null;
 
-  const blogUrl = `/blogs/${post.id}`;
+  const blogId = blog.id;
+  const title = blog.title || 'Untitled Article';
+  const excerpt = blog.excerpt || blog.description || '';
+  const category = blog.category || 'General';
+  const coverImage = blog.coverImage || blog.cover_image || 'https://images.unsplash.com/photo-1499750310107-5fef28a66643?w=800&auto=format&fit=crop&q=80';
+  
+  const authorName = blog.author?.name || blog.author_name || 'Anonymous Author';
+  const authorAvatar = blog.author?.avatar || blog.author_avatar;
+  const firstLetter = authorName.trim().charAt(0).toUpperCase() || 'A';
 
-  const handleCardClick = (e) => {
-    // Navigate to blog details route when user clicks on card
+  const readTime = blog.readTime || blog.read_time || '5 min read';
+  const likesCount = typeof blog.likes === 'number' ? blog.likes : (blog.likes_count || 0);
+  const commentsCount = typeof blog.comments === 'number' ? blog.comments : (blog.comments_count || 0);
+  
+  const formattedDate = blog.createdAt || blog.created_at 
+    ? new Date(blog.createdAt || blog.created_at).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' })
+    : 'Recently';
+
+  const blogUrl = `/blogs/${blogId}`;
+
+  const handleCardClick = () => {
     if (typeof window !== 'undefined') {
       window.location.href = blogUrl;
     }
@@ -34,83 +38,73 @@ export default function BlogCard({ blog }) {
   return (
     <article
       onClick={handleCardClick}
-      className="glass-card rounded-2xl overflow-hidden flex flex-col justify-between group border border-slate-800/80 hover:border-indigo-500/40 transition-all duration-300 cursor-pointer"
+      className="group bg-white border border-slate-300 shadow-sm hover:border-[#ff9432] hover:shadow-md rounded-xl overflow-hidden flex flex-col justify-between transition-all duration-200 cursor-pointer"
     >
-      <div className="space-y-4">
+      <div className="space-y-3">
         
-        {/* 1. Cover Image */}
-        <div className="relative h-48 sm:h-52 w-full overflow-hidden bg-slate-900">
+        {/* Cover Image */}
+        <div className="relative aspect-[16/9] w-full overflow-hidden bg-slate-100 border-b border-slate-200">
           <img
-            src={post.coverImage}
-            alt={post.title}
-            className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500"
+            src={coverImage}
+            alt={title}
+            className="w-full h-full object-cover group-hover:scale-102 transition-transform duration-300 ease-out"
           />
-          <div className="absolute inset-0 bg-gradient-to-t from-slate-950/80 via-transparent to-transparent" />
         </div>
 
-        <div className="px-5 space-y-3">
-          {/* 2. Category */}
-          <div>
-            <span className="inline-block px-3 py-1 rounded-full text-xs font-semibold bg-indigo-600/20 text-indigo-400 border border-indigo-500/30">
-              {post.category}
+        <div className="px-4 pb-2 space-y-2.5">
+          {/* Category & Read time */}
+          <div className="flex items-center justify-between text-xs">
+            <span className="inline-block px-2.5 py-0.5 rounded-md font-semibold text-[11px] bg-amber-50 text-amber-900 border border-amber-300">
+              {category}
             </span>
+            <span className="text-[11px] text-slate-500 font-medium">{readTime}</span>
           </div>
 
-          {/* 3. Blog Title */}
-          <h3 className="text-lg font-bold text-slate-100 group-hover:text-indigo-400 transition-colors line-clamp-2 leading-snug">
-            {post.title}
+          {/* Title */}
+          <h3 className="text-base font-semibold text-slate-900 group-hover:text-[#ff9432] transition-colors line-clamp-2 leading-snug tracking-tight">
+            {title}
           </h3>
 
-          {/* 4. Author Name */}
-          <div className="flex items-center gap-2 pt-1">
-            {post.author?.avatar ? (
-              <img
-                src={post.author.avatar}
-                alt={post.author.name}
-                className="w-6 h-6 rounded-full object-cover border border-slate-700"
-              />
-            ) : (
-              <div className="w-6 h-6 rounded-full bg-slate-800 flex items-center justify-center text-slate-300">
-                <User className="w-3.5 h-3.5" />
-              </div>
-            )}
-            <span className="text-xs font-medium text-slate-300">{post.author?.name || "Anonymous"}</span>
-          </div>
-
-          {/* 5. Short Description */}
-          <p className="text-xs text-slate-400 line-clamp-2 leading-relaxed">
-            {post.excerpt}
+          {/* Excerpt */}
+          <p className="text-xs text-slate-600 line-clamp-2 leading-relaxed font-normal">
+            {excerpt}
           </p>
 
-          {/* 6. Action Bar (Like, Comment, Favourite, Share) - Stops Propagation so clicking buttons won't navigate card */}
-          <div 
-            onClick={(e) => e.stopPropagation()} 
-            className="pt-2 flex items-center justify-between border-t border-slate-800/80 cursor-default"
-          >
+          {/* Author info & Publish Date */}
+          <div className="flex items-center justify-between pt-2 border-t border-slate-200 text-xs">
             <div className="flex items-center gap-2">
-              <LikeButton initialLikes={post.likes} />
-              <CommentButton count={post.comments} />
+              {authorAvatar ? (
+                <img
+                  src={authorAvatar}
+                  alt={authorName}
+                  className="w-5 h-5 rounded-full object-cover border border-slate-300"
+                />
+              ) : (
+                <div className="w-5 h-5 rounded-full bg-[#ff9432] flex items-center justify-center text-white font-bold text-[10px] shadow-xs">
+                  {firstLetter}
+                </div>
+              )}
+              <span className="text-xs font-semibold text-slate-700 truncate max-w-[120px]">{authorName}</span>
             </div>
-            <div className="flex items-center gap-1.5">
-              <FavouriteButton />
-              <ShareButton title={post.title} />
-            </div>
+
+            <span className="text-[11px] text-slate-500 font-medium">{formattedDate}</span>
           </div>
 
-          {/* 7. Read More Button */}
-          <div className="pt-2 pb-2">
-            <a
-              href={blogUrl}
-              onClick={(e) => {
-                e.stopPropagation();
-              }}
-              className="w-full flex items-center justify-center gap-2 py-2 px-4 rounded-xl text-xs font-semibold bg-slate-900 border border-slate-700/80 hover:bg-indigo-600 hover:border-indigo-500 text-slate-200 hover:text-white transition-all duration-200 group/btn"
-            >
-              <span>Read More</span>
-              <ArrowRight className="w-3.5 h-3.5 group-hover/btn:translate-x-1 transition-transform" />
-            </a>
-          </div>
+        </div>
+      </div>
 
+      {/* Action Toolbar */}
+      <div 
+        onClick={(e) => e.stopPropagation()} 
+        className="px-4 py-2 bg-slate-50/90 border-t border-slate-200 flex items-center justify-between cursor-default text-xs"
+      >
+        <div className="flex items-center gap-2">
+          <LikeButton blogId={blogId} initialLikes={likesCount} />
+          <CommentButton blogId={blogId} count={commentsCount} />
+        </div>
+        <div className="flex items-center gap-1.5">
+          <FavouriteButton blogId={blogId} />
+          <ShareButton title={title} />
         </div>
       </div>
     </article>

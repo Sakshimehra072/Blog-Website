@@ -11,7 +11,8 @@ export default function Pagination({ currentPage = 1, totalPages = 5, onPageChan
       <button
         onClick={() => onPageChange && onPageChange(currentPage - 1)}
         disabled={currentPage === 1}
-        className="p-2 rounded-xl bg-slate-900/80 border border-slate-800 text-slate-300 hover:border-slate-700 hover:text-white disabled:opacity-40 disabled:hover:border-slate-800 transition-colors"
+        aria-label="Previous page"
+        className="p-2 rounded-lg bg-white border border-slate-200 text-slate-600 hover:border-slate-300 hover:text-slate-900 disabled:opacity-30 disabled:pointer-events-none transition-colors shadow-xs"
       >
         <ChevronLeft className="w-4 h-4" />
       </button>
@@ -21,10 +22,10 @@ export default function Pagination({ currentPage = 1, totalPages = 5, onPageChan
           <button
             key={page}
             onClick={() => onPageChange && onPageChange(page)}
-            className={`w-9 h-9 rounded-xl text-xs font-semibold transition-all ${
+            className={`w-8 h-8 rounded-lg text-xs font-medium transition-all ${
               currentPage === page
-                ? 'bg-gradient-to-r from-indigo-600 to-purple-600 text-white shadow-md shadow-indigo-500/25'
-                : 'bg-slate-900/80 border border-slate-800 text-slate-400 hover:text-white hover:border-slate-700'
+                ? 'bg-[#ff9432] text-white font-semibold shadow-xs'
+                : 'bg-white border border-slate-200 text-slate-600 hover:text-slate-900 hover:border-slate-300'
             }`}
           >
             {page}
@@ -35,7 +36,8 @@ export default function Pagination({ currentPage = 1, totalPages = 5, onPageChan
       <button
         onClick={() => onPageChange && onPageChange(currentPage + 1)}
         disabled={currentPage === totalPages}
-        className="p-2 rounded-xl bg-slate-900/80 border border-slate-800 text-slate-300 hover:border-slate-700 hover:text-white disabled:opacity-40 disabled:hover:border-slate-800 transition-colors"
+        aria-label="Next page"
+        className="p-2 rounded-lg bg-white border border-slate-200 text-slate-600 hover:border-slate-300 hover:text-slate-900 disabled:opacity-30 disabled:pointer-events-none transition-colors shadow-xs"
       >
         <ChevronRight className="w-4 h-4" />
       </button>

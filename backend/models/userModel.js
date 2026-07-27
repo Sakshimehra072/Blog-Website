@@ -2,32 +2,52 @@ const { pool } = require('../config/database');
 
 // In-Memory Fallback Store (when MySQL local service isn't active)
 const inMemoryUsers = [];
-const inMemoryOtps = [];
 
-// Find user by phone number
-async function findUserByPhone(phoneNumber) {
+// Find user by email address
+async function findUserByEmail(email) {
+  if (!email) return null;
+  const cleanEmail = email.trim().toLowerCase();
   try {
-    const [rows] = await pool.query('SELECT * FROM users WHERE phone_number = ?', [phoneNumber]);
+    const [rows] = await pool.query('SELECT * FROM users WHERE LOWER(email) = ?', [cleanEmail]);
     if (rows.length > 0) return rows[0];
   } catch (err) {
-    // Fallback to in-memory store if DB query fails
+    // Fallback to memory
   }
-  return inMemoryUsers.find(u => u.phone_number === phoneNumber) || null;
+  return inMemoryUsers.find(u => u.email && u.email.toLowerCase() === cleanEmail) || null;
 }
 
-// Find user by username
-async function findUserByUsername(username) {
+// Find user by Email OR Full Name (supports signing in with Name or Email)
+async function findUserByEmailOrName(identifier) {
+  if (!identifier) return null;
+  const clean = identifier.trim().toLowerCase();
   try {
-    const [rows] = await pool.query('SELECT * FROM users WHERE username = ?', [username]);
+    const [rows] = await pool.query(
+      'SELECT * FROM users WHERE LOWER(email) = ? OR LOWER(name) = ?',
+      [clean, clean]
+    );
+    if (rows.length > 0) return rows[0];
+  } catch (err) {
+    // Fallback to memory
+  }
+  return inMemoryUsers.find(
+    u => (u.email && u.email.toLowerCase() === clean) || (u.name && u.name.toLowerCase() === clean)
+  ) || null;
+}
+
+// Find user by ID
+async function findUserById(id) {
+  try {
+    const [rows] = await pool.query('SELECT * FROM users WHERE id = ?', [id]);
     if (rows.length > 0) return rows[0];
   } catch (err) {
     // Fallback
   }
-  return inMemoryUsers.find(u => u.username === username) || null;
+  return inMemoryUsers.find(u => u.id === Number(id)) || null;
 }
 
 // Find user by Google ID
 async function findUserByGoogleId(googleId) {
+  if (!googleId) return null;
   try {
     const [rows] = await pool.query('SELECT * FROM users WHERE google_id = ?', [googleId]);
     if (rows.length > 0) return rows[0];
@@ -37,34 +57,35 @@ async function findUserByGoogleId(googleId) {
   return inMemoryUsers.find(u => u.google_id === googleId) || null;
 }
 
-// Create new user (Manual or OTP / Google)
-async function createUser({ username, phone_number, password_hash = null, email = null, google_id = null, avatar_url = null, is_phone_verified = false }) {
+// Create new user (Sign Up / Google Sign In - Stores name, email, password_hash in MySQL)
+async function createUser({ name, email, password_hash = null, avatar_url = null, google_id = null }) {
+  const cleanEmail = email.trim().toLowerCase();
+  const cleanName = name ? name.trim() : 'User';
+
   try {
     const [result] = await pool.query(
-      `INSERT INTO users (username, phone_number, password_hash, email, google_id, avatar_url, is_phone_verified)
-       VALUES (?, ?, ?, ?, ?, ?, ?)`,
-      [username, phone_number, password_hash, email, google_id, avatar_url, is_phone_verified]
+      `INSERT INTO users (name, email, password_hash, avatar_url, google_id)
+       VALUES (?, ?, ?, ?, ?)`,
+      [cleanName, cleanEmail, password_hash, avatar_url, google_id]
     );
     return {
       id: result.insertId,
-      username,
-      phone_number,
-      email,
-      google_id,
+      name: cleanName,
+      username: cleanName, // alias for backwards compatibility
+      email: cleanEmail,
       avatar_url,
-      is_phone_verified
+      google_id
     };
   } catch (err) {
     // Fallback memory creation
     const newUser = {
       id: inMemoryUsers.length + 1,
-      username: username || `user_${Date.now()}`,
-      phone_number,
+      name: cleanName,
+      username: cleanName,
+      email: cleanEmail,
       password_hash,
-      email,
-      google_id,
       avatar_url,
-      is_phone_verified,
+      google_id,
       created_at: new Date()
     };
     inMemoryUsers.push(newUser);
@@ -72,55 +93,29 @@ async function createUser({ username, phone_number, password_hash = null, email 
   }
 }
 
-// Save OTP record
-async function saveOtp(phoneNumber, otpCode, expiresAt) {
+// Update User Profile
+async function updateUserProfile(id, { name, avatar_url }) {
   try {
     await pool.query(
-      'INSERT INTO otp_codes (phone_number, otp_code, expires_at) VALUES (?, ?, ?)',
-      [phoneNumber, otpCode, expiresAt]
+      'UPDATE users SET name = COALESCE(?, name), avatar_url = COALESCE(?, avatar_url) WHERE id = ?',
+      [name, avatar_url, id]
     );
   } catch (err) {
-    inMemoryOtps.push({
-      phone_number: phoneNumber,
-      otp_code: otpCode,
-      expires_at: expiresAt,
-      is_used: false
-    });
-  }
-}
-
-// Verify OTP record
-async function verifyOtp(phoneNumber, otpCode) {
-  const now = new Date();
-  try {
-    const [rows] = await pool.query(
-      `SELECT * FROM otp_codes 
-       WHERE phone_number = ? AND otp_code = ? AND is_used = FALSE AND expires_at > NOW()
-       ORDER BY created_at DESC LIMIT 1`,
-      [phoneNumber, otpCode]
-    );
-    if (rows.length > 0) {
-      await pool.query('UPDATE otp_codes SET is_used = TRUE WHERE id = ?', [rows[0].id]);
-      return true;
-    }
-  } catch (err) {
-    // Fallback
-    const recordIndex = inMemoryOtps.findIndex(
-      o => o.phone_number === phoneNumber && o.otp_code === otpCode && !o.is_used && new Date(o.expires_at) > now
-    );
-    if (recordIndex !== -1) {
-      inMemoryOtps[recordIndex].is_used = true;
-      return true;
+    // Memory fallback update
+    const user = inMemoryUsers.find(u => u.id === Number(id));
+    if (user) {
+      if (name) { user.name = name; user.username = name; }
+      if (avatar_url) user.avatar_url = avatar_url;
     }
   }
-  return false;
+  return await findUserById(id);
 }
 
 module.exports = {
-  findUserByPhone,
-  findUserByUsername,
+  findUserByEmail,
+  findUserByEmailOrName,
+  findUserById,
   findUserByGoogleId,
   createUser,
-  saveOtp,
-  verifyOtp
+  updateUserProfile
 };

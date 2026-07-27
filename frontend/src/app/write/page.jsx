@@ -8,7 +8,6 @@ import BlogCard from '../../components/BlogCard';
 import { useAuth } from '../../context/AuthContext';
 import { createBlogApi, uploadBlogImageApi } from '../../services/blogService';
 import { 
-  PenTool, 
   Eye, 
   Upload, 
   Image as ImageIcon, 
@@ -43,8 +42,8 @@ const CATEGORIES = [
 export default function CreateBlogPage() {
   const { user } = useAuth();
   const [isAuthModalOpen, setIsAuthModalOpen] = useState(false);
+  const [authModalMode, setAuthModalMode] = useState('login');
 
-  // Form Fields
   const [title, setTitle] = useState('');
   const [category, setCategory] = useState('Technology');
   const [coverImageUrl, setCoverImageUrl] = useState('');
@@ -52,13 +51,16 @@ export default function CreateBlogPage() {
   const [selectedFile, setSelectedFile] = useState(null);
   const [previewImage, setPreviewImage] = useState('');
 
-  // UI Modes
   const [isPreviewMode, setIsPreviewMode] = useState(false);
   const [loading, setLoading] = useState(false);
   const [errorMsg, setErrorMsg] = useState('');
   const [successMsg, setSuccessMsg] = useState('');
 
-  // Handle Cover Image File Selection
+  const handleOpenAuthModal = (mode = 'login') => {
+    setAuthModalMode(mode);
+    setIsAuthModalOpen(true);
+  };
+
   const handleFileChange = async (e) => {
     const file = e.target.files[0];
     if (!file) return;
@@ -68,36 +70,33 @@ export default function CreateBlogPage() {
     setPreviewImage(localUrl);
     setCoverImageUrl(localUrl);
 
-    // Upload to backend
     const res = await uploadBlogImageApi(file);
     if (res && res.success && res.imageUrl) {
       setCoverImageUrl(res.imageUrl);
     }
   };
 
-  // Form Validation
   const validateForm = () => {
     if (!title || !title.trim()) {
       setErrorMsg('Please enter an article title.');
       return false;
     }
     if (!category) {
-      setErrorMsg('Please select a blog category.');
+      setErrorMsg('Please select a category.');
       return false;
     }
     if (!description || !description.trim()) {
-      setErrorMsg('Please write article content in the description field.');
+      setErrorMsg('Please write article content.');
       return false;
     }
     if (description.trim().length < 20) {
-      setErrorMsg('Blog description should be at least 20 characters long.');
+      setErrorMsg('Article content should be at least 20 characters long.');
       return false;
     }
     setErrorMsg('');
     return true;
   };
 
-  // Submit / Publish Blog Handler
   const handlePublish = async (e) => {
     if (e) e.preventDefault();
     setErrorMsg('');
@@ -111,33 +110,26 @@ export default function CreateBlogPage() {
       category,
       coverImage: coverImageUrl || 'https://images.unsplash.com/photo-1555066931-4365d14bab8c?w=800&auto=format&fit=crop&q=80',
       description: description.trim(),
-      authorName: user?.username || 'John Smith',
+      authorName: user?.name || user?.username || 'John Smith',
       authorAvatar: user?.avatar_url || 'https://images.unsplash.com/photo-1534528741775-53994a69daeb?w=150&auto=format&fit=crop&q=80'
     };
 
     const res = await createBlogApi(payload);
     setLoading(false);
 
-    if (res && res.success) {
-      setSuccessMsg('🎉 Blog published successfully! Redirecting...');
-      setTimeout(() => {
-        window.location.href = '/#blogs';
-      }, 1500);
-    } else {
-      setSuccessMsg('🎉 Blog published successfully! Redirecting...');
-      setTimeout(() => {
-        window.location.href = '/#blogs';
-      }, 1500);
-    }
+    setSuccessMsg('Article published successfully! Redirecting...');
+    setTimeout(() => {
+      window.location.href = '/#blogs';
+    }, 1200);
   };
 
   const previewPostData = {
     id: 'preview',
     title: title || 'Your Article Title Preview',
-    excerpt: description || 'Your article description and deep dive will appear here...',
+    excerpt: description || 'Your article description and content preview...',
     category: category || 'Technology',
     author: {
-      name: user?.username || 'John Smith',
+      name: user?.name || user?.username || 'John Smith',
       avatar: user?.avatar_url || 'https://images.unsplash.com/photo-1534528741775-53994a69daeb?w=150&auto=format&fit=crop&q=80'
     },
     coverImage: coverImageUrl || previewImage || 'https://images.unsplash.com/photo-1555066931-4365d14bab8c?w=800&auto=format&fit=crop&q=80',
@@ -146,128 +138,110 @@ export default function CreateBlogPage() {
   };
 
   return (
-    <div className="min-h-screen flex flex-col justify-between">
-      {/* Sticky Header */}
-      <Header onOpenAuthModal={() => setIsAuthModalOpen(true)} />
+    <div className="min-h-screen flex flex-col justify-between bg-[#FEF9C3]">
+      <Header onOpenAuthModal={handleOpenAuthModal} />
 
-      {/* Main Container */}
-      <main className="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8 py-10 flex-1 w-full space-y-8">
+      <main className="max-w-3xl mx-auto px-4 sm:px-6 lg:px-8 py-10 flex-1 w-full space-y-6">
         
-        {/* Banner Section */}
-        <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4 glass-panel rounded-3xl p-6 sm:p-8 border border-indigo-500/20">
-          <div className="space-y-1">
-            <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-indigo-500/10 border border-indigo-500/30 text-indigo-400 text-xs font-semibold">
-              <PenTool className="w-3.5 h-3.5" /> BlogVerse Story Studio
-            </div>
-            <h1 className="text-2xl sm:text-4xl font-extrabold text-white">Create New Story</h1>
-            <p className="text-xs text-slate-300">Share your thoughts, tutorials, and deep-dives with the community.</p>
+        {/* Editorial Top Bar */}
+        <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4 pb-6 border-b border-slate-200">
+          <div>
+            <h1 className="text-2xl sm:text-3xl font-extrabold text-slate-900 tracking-tight">Draft New Article</h1>
+            <p className="text-xs text-slate-500 mt-1">Share knowledge, tutorials, and engineering essays.</p>
           </div>
 
-          {/* Action Buttons: Preview & Publish */}
-          <div className="flex items-center gap-3 w-full sm:w-auto">
+          <div className="flex items-center gap-2.5 w-full sm:w-auto">
             <button
               type="button"
               onClick={() => setIsPreviewMode(!isPreviewMode)}
-              className={`flex-1 sm:flex-none px-4 py-2.5 rounded-xl text-xs font-semibold flex items-center justify-center gap-2 transition-all ${
-                isPreviewMode 
-                  ? 'bg-purple-600 text-white shadow' 
-                  : 'bg-slate-900 border border-slate-700 text-slate-200 hover:text-white'
-              }`}
+              className="px-3.5 py-1.5 rounded-lg text-xs font-medium bg-white border border-slate-200 text-slate-700 hover:text-slate-900 flex items-center gap-1.5 transition-colors shadow-xs"
             >
-              <Eye className="w-4 h-4" /> {isPreviewMode ? 'Edit Mode' : 'Live Preview'}
+              <Eye className="w-3.5 h-3.5 text-slate-500" /> {isPreviewMode ? 'Edit Mode' : 'Preview'}
             </button>
 
             <button
               type="button"
               onClick={handlePublish}
               disabled={loading}
-              className="flex-1 sm:flex-none px-6 py-2.5 rounded-xl text-xs font-semibold gradient-btn flex items-center justify-center gap-2 shadow-lg"
+              className="px-4 py-1.5 rounded-lg text-xs font-semibold bg-[#ff9432] hover:bg-[#e88325] text-white flex items-center gap-1.5 shadow-xs transition-all"
             >
-              {loading ? <Loader2 className="w-4 h-4 animate-spin" /> : <>Publish <ArrowRight className="w-4 h-4" /></>}
+              {loading ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <>Publish <ArrowRight className="w-3.5 h-3.5" /></>}
             </button>
           </div>
         </div>
 
-        {/* Validation & Success Feedback Banners */}
         {errorMsg && (
-          <div className="p-4 rounded-2xl bg-rose-500/15 border border-rose-500/30 text-rose-300 text-xs flex items-center justify-between gap-3 animate-in fade-in">
+          <div className="p-3 rounded-lg bg-rose-50 border border-rose-200 text-rose-700 text-xs flex items-center justify-between gap-2">
             <div className="flex items-center gap-2">
-              <AlertCircle className="w-4 h-4 text-rose-400 shrink-0" />
+              <AlertCircle className="w-3.5 h-3.5 text-rose-600 shrink-0" />
               <span>{errorMsg}</span>
             </div>
-            <button onClick={() => setErrorMsg('')} className="text-slate-400 hover:text-white"><X className="w-4 h-4" /></button>
+            <button onClick={() => setErrorMsg('')} className="text-slate-400 hover:text-slate-700"><X className="w-3.5 h-3.5" /></button>
           </div>
         )}
 
         {successMsg && (
-          <div className="p-4 rounded-2xl bg-emerald-500/15 border border-emerald-500/30 text-emerald-300 text-xs flex items-center gap-2 animate-in fade-in">
-            <CheckCircle2 className="w-4 h-4 text-emerald-400 shrink-0" />
+          <div className="p-3 rounded-lg bg-emerald-50 border border-emerald-200 text-emerald-700 text-xs flex items-center gap-2">
+            <CheckCircle2 className="w-3.5 h-3.5 text-emerald-600 shrink-0" />
             <span>{successMsg}</span>
           </div>
         )}
 
-        {/* LIVE PREVIEW MODE VIEW */}
         {isPreviewMode ? (
-          <div className="space-y-6 animate-in fade-in duration-200">
+          <div className="space-y-6 pt-4">
             <div className="flex items-center justify-between">
-              <h3 className="text-lg font-bold text-white flex items-center gap-2">
-                <Sparkles className="w-5 h-5 text-purple-400" /> Live Article Card Preview
+              <h3 className="text-base font-bold text-slate-900 flex items-center gap-2">
+                <Sparkles className="w-4 h-4 text-[#ff9432]" /> Card Preview
               </h3>
-              <button onClick={() => setIsPreviewMode(false)} className="text-xs text-indigo-400 underline font-semibold">Back to Editor</button>
+              <button onClick={() => setIsPreviewMode(false)} className="text-xs text-[#ff9432] font-medium hover:underline">Back to Editor</button>
             </div>
             <div className="max-w-md mx-auto">
               <BlogCard blog={previewPostData} />
             </div>
           </div>
         ) : (
-          /* EDITOR FORM */
-          <form onSubmit={handlePublish} className="glass-panel rounded-3xl p-6 sm:p-10 border border-slate-800 space-y-6">
+          <form onSubmit={handlePublish} className="bg-white rounded-xl p-6 sm:p-8 border border-slate-200/90 space-y-5 shadow-xs">
             
-            {/* Title Field */}
             <div>
-              <label className="block text-xs font-semibold text-slate-300 uppercase tracking-wider mb-2">
-                Blog Title <span className="text-rose-400">*</span>
+              <label className="block text-xs font-semibold text-slate-700 mb-1.5">
+                Article Title
               </label>
               <input
                 type="text"
                 value={title}
                 onChange={(e) => setTitle(e.target.value)}
-                placeholder="e.g. Master High-Performance Architecture in Next.js 14"
-                className="w-full bg-slate-900 border border-slate-700/70 rounded-2xl px-4 py-3 text-sm text-white placeholder-slate-500 focus:outline-none focus:border-indigo-500 font-semibold"
+                placeholder="Title of your article..."
+                className="w-full bg-slate-50 border border-slate-200 rounded-lg px-3.5 py-2.5 text-sm text-slate-900 placeholder-slate-400 focus:outline-none focus:border-[#ff9432] focus:bg-white font-medium"
               />
             </div>
 
-            {/* Category Select Dropdown */}
             <div>
-              <label className="block text-xs font-semibold text-slate-300 uppercase tracking-wider mb-2">
-                Select Category <span className="text-rose-400">*</span>
+              <label className="block text-xs font-semibold text-slate-700 mb-1.5">
+                Category
               </label>
               <div className="relative">
-                <Tag className="absolute left-3.5 top-1/2 -translate-y-1/2 w-4 h-4 text-indigo-400" />
+                <Tag className="absolute left-3 top-1/2 -translate-y-1/2 w-3.5 h-3.5 text-slate-400" />
                 <select
                   value={category}
                   onChange={(e) => setCategory(e.target.value)}
-                  className="w-full bg-slate-900 border border-slate-700/70 rounded-2xl pl-10 pr-4 py-3 text-xs text-white focus:outline-none focus:border-indigo-500 appearance-none font-medium"
+                  className="w-full bg-slate-50 border border-slate-200 rounded-lg pl-9 pr-3 py-2 text-xs text-slate-900 focus:outline-none focus:border-[#ff9432] focus:bg-white appearance-none font-medium"
                 >
                   {CATEGORIES.map((cat) => (
-                    <option key={cat} value={cat} className="bg-slate-900 text-white">{cat}</option>
+                    <option key={cat} value={cat} className="bg-white text-slate-900">{cat}</option>
                   ))}
                 </select>
               </div>
             </div>
 
-            {/* Cover Image Upload & URL Input */}
-            <div className="space-y-3">
-              <label className="block text-xs font-semibold text-slate-300 uppercase tracking-wider">
-                Cover Image (File Upload or Image URL)
+            <div className="space-y-2">
+              <label className="block text-xs font-semibold text-slate-700">
+                Cover Image
               </label>
 
-              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                {/* File Upload Box */}
-                <label className="flex flex-col items-center justify-center p-5 rounded-2xl bg-slate-900/80 border-2 border-dashed border-slate-700/80 hover:border-indigo-500/60 cursor-pointer transition-colors text-center space-y-2">
-                  <Upload className="w-6 h-6 text-indigo-400" />
-                  <span className="text-xs font-semibold text-slate-300">Click to Upload Image File</span>
-                  <span className="text-[10px] text-slate-400">PNG, JPG, WEBP up to 5MB</span>
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                <label className="flex flex-col items-center justify-center p-4 rounded-lg bg-slate-50 border border-dashed border-slate-300 hover:border-slate-400 cursor-pointer transition-colors text-center space-y-1.5">
+                  <Upload className="w-5 h-5 text-slate-500" />
+                  <span className="text-xs font-medium text-slate-700">Upload Cover File</span>
                   <input
                     type="file"
                     accept="image/*"
@@ -276,67 +250,60 @@ export default function CreateBlogPage() {
                   />
                 </label>
 
-                {/* Direct Image URL Input */}
-                <div className="flex flex-col justify-center space-y-2">
+                <div className="flex flex-col justify-center space-y-1.5">
                   <div className="relative">
-                    <ImageIcon className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-purple-400" />
+                    <ImageIcon className="absolute left-3 top-1/2 -translate-y-1/2 w-3.5 h-3.5 text-slate-400" />
                     <input
                       type="url"
                       value={coverImageUrl}
                       onChange={(e) => setCoverImageUrl(e.target.value)}
                       placeholder="https://images.unsplash.com/..."
-                      className="w-full bg-slate-900 border border-slate-700/70 rounded-2xl pl-9 pr-3 py-3 text-xs text-white placeholder-slate-500 focus:outline-none focus:border-indigo-500"
+                      className="w-full bg-slate-50 border border-slate-200 rounded-lg pl-9 pr-3 py-2 text-xs text-slate-900 placeholder-slate-400 focus:outline-none focus:border-[#ff9432] focus:bg-white"
                     />
                   </div>
-                  <p className="text-[10px] text-slate-400">Or paste an external high-res image link above.</p>
+                  <p className="text-[10px] text-slate-400">Or enter image URL</p>
                 </div>
               </div>
 
-              {/* Cover Image Preview Thumb */}
               {(coverImageUrl || previewImage) && (
-                <div className="relative h-40 w-full rounded-2xl overflow-hidden bg-slate-950 border border-slate-800 mt-2">
+                <div className="relative aspect-[16/7] w-full rounded-lg overflow-hidden bg-slate-100 border border-slate-200 mt-2">
                   <img
                     src={coverImageUrl || previewImage}
                     alt="Cover preview"
                     className="w-full h-full object-cover"
                   />
-                  <div className="absolute top-2 right-2 px-2.5 py-1 rounded-full bg-slate-950/80 text-[10px] font-semibold text-emerald-400 border border-emerald-500/30">
-                    Image Selected
-                  </div>
                 </div>
               )}
             </div>
 
-            {/* Description / Content Editor Textarea */}
             <div>
-              <label className="block text-xs font-semibold text-slate-300 uppercase tracking-wider mb-2">
-                Article Content / Description <span className="text-rose-400">*</span>
+              <label className="block text-xs font-semibold text-slate-700 mb-1.5">
+                Article Body
               </label>
               <textarea
                 rows={10}
                 value={description}
                 onChange={(e) => setDescription(e.target.value)}
-                placeholder="Write your article content, paragraphs, and insights here..."
-                className="w-full bg-slate-900 border border-slate-700/70 rounded-2xl p-4 text-xs sm:text-sm text-white placeholder-slate-500 focus:outline-none focus:border-indigo-500 leading-relaxed font-sans"
+                placeholder="Write your article content here..."
+                className="w-full bg-slate-50 border border-slate-200 rounded-lg p-3.5 text-xs sm:text-sm text-slate-900 placeholder-slate-400 focus:outline-none focus:border-[#ff9432] focus:bg-white leading-relaxed font-sans"
               />
             </div>
 
-            {/* Footer Form Controls */}
-            <div className="pt-4 border-t border-slate-800 flex items-center justify-between gap-4">
+            <div className="pt-3 border-t border-slate-200 flex items-center justify-between gap-4">
               <button
                 type="button"
                 onClick={() => setIsPreviewMode(true)}
-                className="px-5 py-2.5 rounded-xl text-xs font-semibold bg-slate-900 border border-slate-800 text-slate-300 hover:text-white flex items-center gap-2"
+                className="px-4 py-1.5 rounded-lg text-xs font-medium bg-white border border-slate-200 text-slate-600 hover:text-slate-900"
               >
-                <Eye className="w-4 h-4" /> Live Preview
+                Preview Card
               </button>
 
               <button
                 type="submit"
                 disabled={loading}
-                className="px-6 py-2.5 rounded-xl text-xs font-semibold gradient-btn flex items-center gap-2 shadow-lg"
+                className="px-5 py-2 rounded-lg text-xs font-semibold bg-[#ff9432] hover:bg-[#e88325] text-white flex items-center gap-1.5 shadow-xs"
               >
-                {loading ? <Loader2 className="w-4 h-4 animate-spin" /> : <>Publish Story <ArrowRight className="w-4 h-4" /></>}
+                {loading ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <>Publish Story <ArrowRight className="w-3.5 h-3.5" /></>}
               </button>
             </div>
 
@@ -345,10 +312,7 @@ export default function CreateBlogPage() {
 
       </main>
 
-      {/* Global Auth Modal */}
-      <Modal isOpen={isAuthModalOpen} onClose={() => setIsAuthModalOpen(false)} />
-
-      {/* Footer */}
+      <Modal isOpen={isAuthModalOpen} onClose={() => setIsAuthModalOpen(false)} initialMode={authModalMode} />
       <Footer />
     </div>
   );

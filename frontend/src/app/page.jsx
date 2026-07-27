@@ -1,16 +1,20 @@
 'use client';
 
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import Header from '../components/Header';
 import Footer from '../components/Footer';
 import BlogCard from '../components/BlogCard';
-import CategoryCard from '../components/CategoryCard';
+import CategoryScrollSection from '../components/CategoryScrollSection';
 import Pagination from '../components/Pagination';
 import Modal from '../components/Modal';
+import { fetchBlogsApi } from '../services/blogService';
+import { getSocket } from '../services/socketService';
 import { 
-  Sparkles, 
   TrendingUp, 
   Search, 
+  ArrowRight,
+  PenTool,
+  LayoutGrid,
   Cpu, 
   Code2, 
   Bot, 
@@ -26,76 +30,82 @@ import {
   Film, 
   Gamepad2, 
   Atom, 
-  Camera 
+  Camera,
+  BookOpen
 } from 'lucide-react';
 
-// Exact 16 Categories requested
-const ALL_CATEGORIES = [
-  { id: 'tech', name: 'Technology', count: 42, icon: Cpu, color: 'from-blue-500 to-indigo-600' },
-  { id: 'programming', name: 'Programming', count: 38, icon: Code2, color: 'from-indigo-500 to-purple-600' },
-  { id: 'ai', name: 'Artificial Intelligence', count: 45, icon: Bot, color: 'from-purple-500 to-pink-600' },
-  { id: 'business', name: 'Business', count: 24, icon: Briefcase, color: 'from-emerald-500 to-teal-600' },
-  { id: 'finance', name: 'Finance', count: 19, icon: DollarSign, color: 'from-amber-500 to-yellow-600' },
-  { id: 'travel', name: 'Travel', count: 31, icon: Plane, color: 'from-cyan-500 to-blue-600' },
-  { id: 'health', name: 'Health', count: 27, icon: Activity, color: 'from-rose-500 to-red-600' },
-  { id: 'education', name: 'Education', count: 22, icon: GraduationCap, color: 'from-violet-500 to-purple-600' },
-  { id: 'sports', name: 'Sports', count: 18, icon: Trophy, color: 'from-orange-500 to-amber-600' },
-  { id: 'food', name: 'Food', count: 29, icon: Utensils, color: 'from-lime-500 to-emerald-600' },
-  { id: 'fashion', name: 'Fashion', count: 16, icon: Shirt, color: 'from-pink-500 to-rose-600' },
-  { id: 'lifestyle', name: 'Lifestyle', count: 33, icon: Smile, color: 'from-teal-500 to-green-600' },
-  { id: 'movies', name: 'Movies', count: 21, icon: Film, color: 'from-red-500 to-orange-600' },
-  { id: 'gaming', name: 'Gaming', count: 40, icon: Gamepad2, color: 'from-fuchsia-500 to-purple-600' },
-  { id: 'science', name: 'Science', count: 26, icon: Atom, color: 'from-sky-500 to-indigo-600' },
-  { id: 'photography', name: 'Photography', count: 15, icon: Camera, color: 'from-indigo-500 to-blue-600' },
-];
-
-// Sample posts data
-const SAMPLE_POSTS = [
-  {
-    id: 1,
-    title: "Building High-Performance Full Stack Web Apps in 2026",
-    excerpt: "Explore the modern architecture patterns, optimization techniques, and responsive design systems that power lightning-fast web applications.",
-    category: "Technology",
-    author: {
-      name: "Sarah Jenkins",
-      avatar: "https://images.unsplash.com/photo-1494790108377-be9c29b29330?w=150&auto=format&fit=crop&q=80"
-    },
-    coverImage: "https://images.unsplash.com/photo-1555066931-4365d14bab8c?w=800&auto=format&fit=crop&q=80",
-    likes: 142,
-    comments: 28
-  },
-  {
-    id: 2,
-    title: "The Next Era of Artificial Intelligence: Agentic Systems",
-    excerpt: "How autonomous agent workflows are reinventing software engineering, data synthesis, and human-computer interfaces.",
-    category: "Artificial Intelligence",
-    author: {
-      name: "Marcus Chen",
-      avatar: "https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?w=150&auto=format&fit=crop&q=80"
-    },
-    coverImage: "https://images.unsplash.com/photo-1618005182384-a83a8bd57fbe?w=800&auto=format&fit=crop&q=80",
-    likes: 215,
-    comments: 42
-  },
-  {
-    id: 3,
-    title: "Mastering Clean Code & Refactoring in Modern JavaScript",
-    excerpt: "Delight your visitors and maintain code scalability with proven design patterns and functional modularity.",
-    category: "Programming",
-    author: {
-      name: "Elena Rostova",
-      avatar: "https://images.unsplash.com/photo-1534528741775-53994a69daeb?w=150&auto=format&fit=crop&q=80"
-    },
-    coverImage: "https://images.unsplash.com/photo-1507238691740-187a5b1d37b8?w=800&auto=format&fit=crop&q=80",
-    likes: 98,
-    comments: 14
-  }
+const BASE_CATEGORIES = [
+  { id: 'All', name: 'All', count: 0, icon: LayoutGrid },
+  { id: 'Technology', name: 'Technology', count: 0, icon: Cpu },
+  { id: 'Programming', name: 'Programming', count: 0, icon: Code2 },
+  { id: 'Artificial Intelligence', name: 'Artificial Intelligence', count: 0, icon: Bot },
+  { id: 'Business', name: 'Business', count: 0, icon: Briefcase },
+  { id: 'Finance', name: 'Finance', count: 0, icon: DollarSign },
+  { id: 'Travel', name: 'Travel', count: 0, icon: Plane },
+  { id: 'Health', name: 'Health', count: 0, icon: Activity },
+  { id: 'Education', name: 'Education', count: 0, icon: GraduationCap },
+  { id: 'Sports', name: 'Sports', count: 0, icon: Trophy },
+  { id: 'Food', name: 'Food', count: 0, icon: Utensils },
+  { id: 'Fashion', name: 'Fashion', count: 0, icon: Shirt },
+  { id: 'Lifestyle', name: 'Lifestyle', count: 0, icon: Smile },
+  { id: 'Movies', name: 'Movies', count: 0, icon: Film },
+  { id: 'Gaming', name: 'Gaming', count: 0, icon: Gamepad2 },
+  { id: 'Science', name: 'Science', count: 0, icon: Atom },
+  { id: 'Photography', name: 'Photography', count: 0, icon: Camera },
 ];
 
 export default function HomePage() {
   const [isAuthModalOpen, setIsAuthModalOpen] = useState(false);
-  const [activeCategory, setActiveCategory] = useState(null);
+  const [authModalMode, setAuthModalMode] = useState('login');
+  const [activeCategory, setActiveCategory] = useState('All');
+  const [categoriesList, setCategoriesList] = useState(BASE_CATEGORIES);
   const [page, setPage] = useState(1);
+  const [blogs, setBlogs] = useState([]);
+  const [loading, setLoading] = useState(true);
+
+  const handleOpenAuthModal = (mode = 'login') => {
+    setAuthModalMode(mode);
+    setIsAuthModalOpen(true);
+  };
+
+  const loadBlogs = async () => {
+    setLoading(true);
+    const queryCategory = (activeCategory === 'All' || !activeCategory) ? null : activeCategory;
+    const res = await fetchBlogsApi(queryCategory, page, 20);
+    if (res && res.success && Array.isArray(res.data)) {
+      setBlogs(res.data);
+      if (res.categoryCounts) {
+        setCategoriesList(BASE_CATEGORIES.map(cat => ({
+          ...cat,
+          count: res.categoryCounts[cat.name] || (cat.id === 'All' ? (res.categoryCounts['All'] || 0) : 0)
+        })));
+      }
+    } else if (Array.isArray(res)) {
+      setBlogs(res);
+    } else {
+      setBlogs([]);
+    }
+    setLoading(false);
+  };
+
+  useEffect(() => {
+    loadBlogs();
+  }, [activeCategory, page]);
+
+  // Real-Time Socket Listener for Instant Post & Like Updates
+  useEffect(() => {
+    const socket = getSocket();
+
+    const handleBlogPublished = (newBlog) => {
+      loadBlogs();
+    };
+
+    socket.on('blog:published', handleBlogPublished);
+
+    return () => {
+      socket.off('blog:published', handleBlogPublished);
+    };
+  }, [activeCategory]);
 
   const scrollToSearch = () => {
     const blogsEl = document.getElementById('blogs');
@@ -103,116 +113,114 @@ export default function HomePage() {
   };
 
   return (
-    <div className="min-h-screen flex flex-col justify-between">
-      {/* Sticky Header */}
-      <Header onOpenAuthModal={() => setIsAuthModalOpen(true)} onFocusSearch={scrollToSearch} />
+    <div className="min-h-screen flex flex-col justify-between bg-[#FEF9C3]">
+      <Header onOpenAuthModal={handleOpenAuthModal} onFocusSearch={scrollToSearch} />
 
-      {/* Main Container */}
-      <main className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-10 flex-1 w-full space-y-16">
+      <main className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-10 flex-1 w-full space-y-14">
         
-        {/* HERO SECTION */}
-        <section className="relative overflow-hidden rounded-3xl p-8 sm:p-14 glass-panel border border-indigo-500/20 shadow-2xl">
-          <div className="absolute -right-20 -bottom-20 w-96 h-96 bg-indigo-500/10 rounded-full blur-3xl pointer-events-none" />
-          <div className="absolute -left-20 -top-20 w-96 h-96 bg-purple-500/10 rounded-full blur-3xl pointer-events-none" />
-          
-          <div className="relative z-10 max-w-3xl space-y-5">
-            <div className="inline-flex items-center gap-2 px-3.5 py-1.5 rounded-full bg-indigo-500/10 border border-indigo-500/30 text-indigo-400 text-xs font-semibold">
-              <Sparkles className="w-3.5 h-3.5" /> BlogVerse Publishing Network
+        {/* Editorial Hero Banner */}
+        <section className="relative overflow-hidden rounded-2xl p-8 sm:p-12 bg-white border border-slate-200/90 shadow-xs">
+          <div className="relative z-10 max-w-3xl space-y-4">
+            <div className="inline-flex items-center gap-2 px-3 py-1 rounded-md bg-amber-50 border border-amber-200 text-amber-900 text-xs font-semibold">
+              Live Real-Time Publishing Platform
             </div>
             
-            {/* Website Title */}
-            <h1 className="text-4xl sm:text-6xl font-extrabold tracking-tight text-white leading-tight">
-              Discover, Create & Share <span className="gradient-text">World-Class Stories</span>.
+            <h1 className="text-3xl sm:text-5xl font-extrabold tracking-tight text-slate-900 leading-tight">
+              Stories, Insights & <span className="text-[#ff9432]">Engineering Essays</span>.
             </h1>
 
-            {/* Short Description */}
-            <p className="text-slate-300 text-sm sm:text-lg leading-relaxed max-w-2xl">
-              BlogVerse is your destination for inspiring blogs across technology, programming, design, lifestyle, and global insights. Engage with authors, save your favorites, and share your voice.
+            <p className="text-slate-600 text-sm sm:text-base leading-relaxed max-w-2xl font-normal">
+              BlogVerse is an independent platform for registered authors sharing genuine perspectives on tech, code, design, and culture.
             </p>
 
-            {/* Search Blogs Button */}
-            <div className="pt-3 flex flex-wrap items-center gap-4">
-              <button 
-                onClick={scrollToSearch}
-                className="px-6 py-3.5 rounded-xl text-sm font-semibold gradient-btn flex items-center gap-2 shadow-lg"
+            <div className="pt-2 flex flex-wrap items-center gap-3">
+              <a
+                href="/write"
+                className="px-5 py-2.5 rounded-lg text-xs font-semibold bg-[#ff9432] hover:bg-[#e88325] text-white transition-all shadow-xs flex items-center gap-2"
               >
-                <Search className="w-4 h-4" /> Search Blogs
-              </button>
+                <PenTool className="w-3.5 h-3.5" /> Write Article
+              </a>
               
               <a 
-                href="#categories"
-                className="px-6 py-3.5 rounded-xl text-sm font-semibold bg-slate-900/80 border border-slate-700/80 hover:bg-slate-800 text-slate-200 transition-colors"
+                href="#blogs"
+                className="px-5 py-2.5 rounded-lg text-xs font-semibold bg-white border border-slate-200 hover:bg-slate-50 text-slate-700 transition-colors flex items-center gap-1.5"
               >
-                Explore Categories
+                Explore Recent Uploads <ArrowRight className="w-3.5 h-3.5 text-slate-400" />
               </a>
             </div>
           </div>
         </section>
 
-        {/* BLOG CATEGORIES SECTION (16 Cards Grid) */}
-        <section id="categories" className="space-y-6">
-          <div className="flex items-center justify-between">
-            <h2 className="text-2xl font-bold text-white tracking-tight flex items-center gap-2">
-              <span className="w-2.5 h-6 rounded-full bg-gradient-to-b from-indigo-500 to-purple-500 inline-block" />
-              Blog Categories
-            </h2>
-            <span className="text-xs font-semibold text-slate-400">16 Topics Available</span>
-          </div>
+        {/* Scrollable Categories Carousel */}
+        <CategoryScrollSection
+          categories={categoriesList}
+          activeCategory={activeCategory}
+          onSelectCategory={(catId) => {
+            setActiveCategory(catId || 'All');
+            setPage(1);
+          }}
+        />
 
-          <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-4 gap-4">
-            {ALL_CATEGORIES.map((cat) => (
-              <CategoryCard
-                key={cat.id}
-                category={cat}
-                isActive={activeCategory === cat.id}
-                onClick={() => setActiveCategory(activeCategory === cat.id ? null : cat.id)}
-              />
-            ))}
-          </div>
-        </section>
-
-        {/* LATEST BLOGS SECTION */}
+        {/* Recent Uploads Section */}
         <section id="blogs" className="space-y-6">
           <div className="flex items-center justify-between">
-            <h2 className="text-2xl font-bold text-white tracking-tight flex items-center gap-2">
-              <TrendingUp className="w-6 h-6 text-purple-400" />
-              Latest Blogs
+            <h2 className="text-xl font-bold text-slate-900 tracking-tight flex items-center gap-2">
+              <TrendingUp className="w-5 h-5 text-[#ff9432]" />
+              {activeCategory === 'All' ? 'Recent Uploads' : `${activeCategory} Articles`}
             </h2>
-            {activeCategory && (
+            {activeCategory && activeCategory !== 'All' && (
               <button
-                onClick={() => setActiveCategory(null)}
-                className="text-xs font-semibold px-3 py-1 rounded-lg bg-indigo-600/20 text-indigo-400 border border-indigo-500/30"
+                onClick={() => {
+                  setActiveCategory('All');
+                  setPage(1);
+                }}
+                className="text-xs font-semibold px-3 py-1.5 rounded-lg bg-amber-50 text-amber-900 border border-amber-200 hover:bg-amber-100 transition-colors"
               >
-                Filtered: Clear Selection ×
+                Filtered: {activeCategory} × (Show All)
               </button>
             )}
           </div>
 
-          {/* Blog Cards Grid */}
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-            {SAMPLE_POSTS.map((post) => (
-              <BlogCard key={post.id} blog={post} />
-            ))}
-          </div>
+          {loading ? (
+            <div className="p-12 text-center text-xs text-slate-500 font-medium">
+              Loading recent articles...
+            </div>
+          ) : blogs.length > 0 ? (
+            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+              {blogs.map((post) => (
+                <BlogCard key={post.id} blog={post} />
+              ))}
+            </div>
+          ) : (
+            <div className="bg-white rounded-2xl p-12 text-center border border-slate-200 max-w-md mx-auto my-6 space-y-4 shadow-xs">
+              <div className="w-12 h-12 rounded-xl bg-amber-50 border border-amber-200 flex items-center justify-center text-[#ff9432] mx-auto">
+                <BookOpen className="w-6 h-6 text-[#ff9432]" />
+              </div>
+              <div className="space-y-1">
+                <h3 className="text-base font-bold text-slate-900 tracking-tight">No articles published yet</h3>
+                <p className="text-xs text-slate-500">
+                  {activeCategory !== 'All' ? `No stories found in ${activeCategory}.` : 'Be the first registered author to write and publish an essay!'}
+                </p>
+              </div>
+              <div className="pt-2">
+                <a
+                  href="/write"
+                  className="inline-flex items-center gap-1.5 px-4 py-2 rounded-lg text-xs font-semibold bg-[#ff9432] hover:bg-[#e88325] text-white shadow-xs transition-all"
+                >
+                  <PenTool className="w-3.5 h-3.5" /> Create First Post
+                </a>
+              </div>
+            </div>
+          )}
 
-          {/* Pagination */}
-          <Pagination currentPage={page} totalPages={5} onPageChange={(p) => setPage(p)} />
-        </section>
-
-        {/* SAVED FAVOURITES SECTION ANCHOR */}
-        <section id="favourites" className="p-8 rounded-3xl glass-panel border border-slate-800 text-center space-y-4">
-          <h3 className="text-xl font-bold text-white">Your Saved Favourites</h3>
-          <p className="text-xs text-slate-400 max-w-md mx-auto">
-            Click the bookmark icon on any blog card to keep track of your favorite articles here.
-          </p>
+          {blogs.length >= 20 && (
+            <Pagination currentPage={page} totalPages={Math.ceil(blogs.length / 20) + 1} onPageChange={(p) => setPage(p)} />
+          )}
         </section>
 
       </main>
 
-      {/* Auth Modal */}
-      <Modal isOpen={isAuthModalOpen} onClose={() => setIsAuthModalOpen(false)} />
-
-      {/* Footer */}
+      <Modal isOpen={isAuthModalOpen} onClose={() => setIsAuthModalOpen(false)} initialMode={authModalMode} />
       <Footer />
     </div>
   );

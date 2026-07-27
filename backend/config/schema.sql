@@ -1,27 +1,70 @@
--- BlogVerse MySQL Schema
+-- BlogVerse MySQL Full Schema
 CREATE DATABASE IF NOT EXISTS blogverse_db;
 USE blogverse_db;
 
--- Users Table
+-- 1. Users Table
 CREATE TABLE IF NOT EXISTS users (
   id INT AUTO_INCREMENT PRIMARY KEY,
-  username VARCHAR(50) UNIQUE DEFAULT NULL,
-  phone_number VARCHAR(20) UNIQUE NOT NULL,
+  name VARCHAR(100) NOT NULL,
+  email VARCHAR(150) UNIQUE NOT NULL,
   password_hash VARCHAR(255) DEFAULT NULL,
-  email VARCHAR(100) DEFAULT NULL,
-  google_id VARCHAR(100) DEFAULT NULL,
   avatar_url VARCHAR(255) DEFAULT NULL,
-  is_phone_verified BOOLEAN DEFAULT FALSE,
+  google_id VARCHAR(100) DEFAULT NULL,
   created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
   updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP
 );
 
--- OTP Codes Table for Twilio Verification
-CREATE TABLE IF NOT EXISTS otp_codes (
+-- 2. Blogs Table
+CREATE TABLE IF NOT EXISTS blogs (
   id INT AUTO_INCREMENT PRIMARY KEY,
-  phone_number VARCHAR(20) NOT NULL,
-  otp_code VARCHAR(10) NOT NULL,
-  expires_at TIMESTAMP NOT NULL,
-  is_used BOOLEAN DEFAULT FALSE,
-  created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+  author_id INT DEFAULT NULL,
+  author_name VARCHAR(100) NOT NULL,
+  author_avatar VARCHAR(255) DEFAULT NULL,
+  title VARCHAR(255) NOT NULL,
+  category VARCHAR(100) NOT NULL,
+  cover_image VARCHAR(500) DEFAULT NULL,
+  description TEXT NOT NULL,
+  read_time VARCHAR(20) DEFAULT '5 min read',
+  likes_count INT DEFAULT 0,
+  comments_count INT DEFAULT 0,
+  created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+  updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+  FOREIGN KEY (author_id) REFERENCES users(id) ON DELETE SET NULL
+);
+
+-- 3. Likes Table (Prevents duplicate likes)
+CREATE TABLE IF NOT EXISTS likes (
+  id INT AUTO_INCREMENT PRIMARY KEY,
+  user_id INT NOT NULL,
+  blog_id INT NOT NULL,
+  created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+  UNIQUE KEY unique_user_blog_like (user_id, blog_id),
+  FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE,
+  FOREIGN KEY (blog_id) REFERENCES blogs(id) ON DELETE CASCADE
+);
+
+-- 4. Favourites / Saved Blogs Table (Prevents duplicate bookmarks)
+CREATE TABLE IF NOT EXISTS favourites (
+  id INT AUTO_INCREMENT PRIMARY KEY,
+  user_id INT NOT NULL,
+  blog_id INT NOT NULL,
+  created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+  UNIQUE KEY unique_user_blog_fav (user_id, blog_id),
+  FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE,
+  FOREIGN KEY (blog_id) REFERENCES blogs(id) ON DELETE CASCADE
+);
+
+-- 5. Comments Table
+CREATE TABLE IF NOT EXISTS comments (
+  id INT AUTO_INCREMENT PRIMARY KEY,
+  blog_id INT NOT NULL,
+  user_id INT DEFAULT NULL,
+  author_name VARCHAR(100) NOT NULL,
+  author_avatar VARCHAR(255) DEFAULT NULL,
+  text TEXT NOT NULL,
+  parent_id INT DEFAULT NULL,
+  created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+  FOREIGN KEY (blog_id) REFERENCES blogs(id) ON DELETE CASCADE,
+  FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE SET NULL,
+  FOREIGN KEY (parent_id) REFERENCES comments(id) ON DELETE CASCADE
 );

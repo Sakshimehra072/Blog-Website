@@ -2,12 +2,11 @@
 
 import React, { createContext, useContext, useState, useEffect } from 'react';
 import { 
-  sendOtpApi, 
-  verifyOtpApi, 
   registerApi, 
   loginApi, 
   googleLoginApi, 
-  getMeApi 
+  getMeApi,
+  updateProfileApi 
 } from '../services/authService';
 
 const AuthContext = createContext({
@@ -15,11 +14,10 @@ const AuthContext = createContext({
   token: null,
   isLoggedIn: false,
   loading: true,
-  sendOtp: async () => {},
-  verifyOtp: async () => {},
   register: async () => {},
   login: async () => {},
   googleLogin: async () => {},
+  updateProfile: async () => {},
   logout: () => {},
 });
 
@@ -49,7 +47,7 @@ export function AuthProvider({ children }) {
             localStorage.setItem('blogverse_user', JSON.stringify(res.user));
           }
         } catch (err) {
-          // Token expired
+          // Token expired or invalid
           logout();
         }
       }
@@ -65,28 +63,16 @@ export function AuthProvider({ children }) {
     localStorage.setItem('blogverse_user', JSON.stringify(userData));
   };
 
-  const sendOtp = async (phone_number) => {
-    return await sendOtpApi(phone_number);
-  };
-
-  const verifyOtp = async (phone_number, otp_code) => {
-    const res = await verifyOtpApi(phone_number, otp_code);
+  const register = async (name, email, password) => {
+    const res = await registerApi(name, email, password);
     if (res.success && res.token) {
       saveAuthSession(res.token, res.user);
     }
     return res;
   };
 
-  const register = async (username, phone_number, password) => {
-    const res = await registerApi(username, phone_number, password);
-    if (res.success && res.token) {
-      saveAuthSession(res.token, res.user);
-    }
-    return res;
-  };
-
-  const login = async (phone_number, password) => {
-    const res = await loginApi(phone_number, password);
+  const login = async (email, password) => {
+    const res = await loginApi(email, password);
     if (res.success && res.token) {
       saveAuthSession(res.token, res.user);
     }
@@ -124,8 +110,6 @@ export function AuthProvider({ children }) {
       token,
       isLoggedIn: !!user,
       loading,
-      sendOtp,
-      verifyOtp,
       register,
       login,
       googleLogin,

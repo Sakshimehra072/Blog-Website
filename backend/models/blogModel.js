@@ -1,65 +1,223 @@
 const { pool } = require('../config/database');
 
-// In-Memory Fallback Blog Store
-const inMemoryBlogs = [
-  {
-    id: 1,
-    title: "Building High-Performance Full Stack Web Apps in 2026",
-    category: "Technology",
-    coverImage: "https://images.unsplash.com/photo-1555066931-4365d14bab8c?w=800&auto=format&fit=crop&q=80",
-    description: "Explore the modern architecture patterns, optimization techniques, and responsive design systems that power lightning-fast web applications.",
-    author: {
-      name: "Sarah Jenkins",
-      avatar: "https://images.unsplash.com/photo-1494790108377-be9c29b29330?w=150&auto=format&fit=crop&q=80"
-    },
-    likes: 142,
-    comments: 28,
-    created_at: new Date().toISOString()
-  }
-];
+// Pure Database & In-Memory Store (Zero default/hardcoded sample data)
+const inMemoryBlogs = [];
+const inMemoryLikes = []; // { user_id, blog_id }
 
-async function createBlogInDb({ title, category, coverImage, description, author }) {
+// 1. Create a new blog post
+async function createBlogInDb({ title, category, coverImage, description, authorId, authorName, authorAvatar, readTime }) {
+  const cleanReadTime = readTime || '5 min read';
+  const cleanCoverImage = coverImage || 'https://images.unsplash.com/photo-1499750310107-5fef28a66643?w=800&auto=format&fit=crop&q=80';
+
   const newBlog = {
-    id: inMemoryBlogs.length + 1,
     title,
     category,
-    coverImage: coverImage || 'https://images.unsplash.com/photo-1499750310107-5fef28a66643?w=800&auto=format&fit=crop&q=80',
+    cover_image: cleanCoverImage,
     description,
-    author: author || {
-      name: 'John Smith',
-      avatar: 'https://images.unsplash.com/photo-1534528741775-53994a69daeb?w=150&auto=format&fit=crop&q=80'
-    },
-    likes: 0,
-    comments: 0,
+    author_id: authorId || null,
+    author_name: authorName || 'Anonymous Author',
+    author_avatar: authorAvatar || null,
+    read_time: cleanReadTime,
+    likes_count: 0,
+    comments_count: 0,
     created_at: new Date().toISOString()
   };
 
   try {
     const [result] = await pool.query(
-      `INSERT INTO blogs (title, category, cover_image, description, author_name, author_avatar)
-       VALUES (?, ?, ?, ?, ?, ?)`,
-      [title, category, newBlog.coverImage, description, newBlog.author.name, newBlog.author.avatar]
+      `INSERT INTO blogs (title, category, cover_image, description, author_id, author_name, author_avatar, read_time)
+       VALUES (?, ?, ?, ?, ?, ?, ?, ?)`,
+      [
+        newBlog.title,
+        newBlog.category,
+        newBlog.cover_image,
+        newBlog.description,
+        newBlog.author_id,
+        newBlog.author_name,
+        newBlog.author_avatar,
+        newBlog.read_time
+      ]
     );
     newBlog.id = result.insertId;
   } catch (err) {
-    // Fallback to in-memory store
+    // Memory fallback
+    newBlog.id = inMemoryBlogs.length + 1;
     inMemoryBlogs.unshift(newBlog);
   }
 
-  return newBlog;
+  return formatBlogResponse(newBlog);
 }
 
-async function getAllBlogsFromDb() {
+// 2. Fetch all blogs (With category filter, pagination page & limit)
+async function getBlogsFromDb({ category = null, page = 1, limit = 20 }) {
+  const pageNum = parseInt(page) || 1;
+  const limitNum = parseInt(limit) || 20;
+  const offset = (pageNum - 1) * limitNum;
+
   try {
-    const [rows] = await pool.query('SELECT * FROM blogs ORDER BY created_at DESC');
-    if (rows.length > 0) return rows;
+    let query = `
+      SELECT b.*, 
+             (SELECT COUNT(*) FROM comments WHERE blog_id = b.id) as real_comments_count,
+             (SELECT COUNT(*) FROM likes WHERE blog_id = b.id) as real_likes_count,
+             u.name as live_author_name, 
+             u.avatar_url as live_author_avatar 
+      FROM blogs b 
+      LEFT JOIN users u ON b.author_id = u.id
+    `;
+    const params = [];
+
+    if (category && category.trim()) {
+      query += ` WHERE LOWER(b.category) = LOWER(?)`;
+      params.push(category.trim());
+    }
+
+    query += ` ORDER BY b.created_at DESC LIMIT ? OFFSET ?`;
+    params.push(limitNum, offset);
+
+    const [rows] = await pool.query(query, params);
+    if (rows.length > 0) {
+      return rows.map(formatBlogResponse);
+    }
+    return [];
   } catch (err) {
-    // Fallback
+    // Memory fallback filter
+    let filtered = inMemoryBlogs;
+    if (category && category.trim()) {
+      filtered = filtered.filter(b => b.category.toLowerCase() === category.trim().toLowerCase());
+    }
+    const sliced = filtered.slice(offset, offset + limitNum);
+    return sliced.map(formatBlogResponse);
   }
-  return inMemoryBlogs;
+}
+
+// 3. Fetch single blog by ID
+async function getBlogByIdFromDb(blogId) {
+  const bId = Number(blogId);
+  try {
+    const [rows] = await pool.query(
+      `SELECT b.*, 
+              (SELECT COUNT(*) FROM comments WHERE blog_id = b.id) as real_comments_count,
+              (SELECT COUNT(*) FROM likes WHERE blog_id = b.id) as real_likes_count,
+              u.name as live_author_name, 
+              u.avatar_url as live_author_avatar 
+       FROM blogs b 
+       LEFT JOIN users u ON b.author_id = u.id 
+       WHERE b.id = ?`,
+      [bId]
+    );
+    if (rows.length > 0) {
+      return formatBlogResponse(rows[0]);
+    }
+  } catch (err) {
+    // Memory fallback
+    const blog = inMemoryBlogs.find(b => Number(b.id) === bId);
+    if (blog) return formatBlogResponse(blog);
+  }
+  return null;
+}
+
+// 4. Toggle Like on a Blog (Prevents duplicate likes)
+async function toggleLikeBlogInDb(userId, blogId) {
+  const uId = Number(userId);
+  const bId = Number(blogId);
+
+  try {
+    const [existing] = await pool.query(
+      'SELECT * FROM likes WHERE user_id = ? AND blog_id = ?',
+      [uId, bId]
+    );
+
+    let liked = false;
+    if (existing.length > 0) {
+      // Remove like
+      await pool.query('DELETE FROM likes WHERE id = ?', [existing[0].id]);
+      await pool.query('UPDATE blogs SET likes_count = GREATEST(0, likes_count - 1) WHERE id = ?', [bId]);
+      liked = false;
+    } else {
+      // Add like
+      await pool.query('INSERT INTO likes (user_id, blog_id) VALUES (?, ?)', [uId, bId]);
+      await pool.query('UPDATE blogs SET likes_count = likes_count + 1 WHERE id = ?', [bId]);
+      liked = true;
+    }
+
+    const [updatedRows] = await pool.query('SELECT COUNT(*) as real_likes FROM likes WHERE blog_id = ?', [bId]);
+    const likesCount = updatedRows.length > 0 ? Number(updatedRows[0].real_likes) : 0;
+
+    return { liked, likesCount };
+  } catch (err) {
+    // Memory fallback toggle
+    const index = inMemoryLikes.findIndex(l => Number(l.user_id) === uId && Number(l.blog_id) === bId);
+    const blog = inMemoryBlogs.find(b => Number(b.id) === bId);
+    let liked = false;
+
+    if (index !== -1) {
+      inMemoryLikes.splice(index, 1);
+      if (blog) blog.likes_count = Math.max(0, (blog.likes_count || 1) - 1);
+      liked = false;
+    } else {
+      inMemoryLikes.push({ user_id: uId, blog_id: bId });
+      if (blog) blog.likes_count = (blog.likes_count || 0) + 1;
+      liked = true;
+    }
+
+    return { liked, likesCount: blog ? blog.likes_count : 0 };
+  }
+}
+
+// 5. Get Real Category Counts
+async function getCategoryCountsFromDb() {
+  const countsMap = {};
+
+  try {
+    const [totalRows] = await pool.query('SELECT COUNT(*) as total FROM blogs');
+    countsMap['All'] = totalRows.length > 0 ? totalRows[0].total : 0;
+
+    const [rows] = await pool.query('SELECT category, COUNT(*) as count FROM blogs GROUP BY category');
+    rows.forEach(r => {
+      if (r.category) {
+        countsMap[r.category] = r.count;
+      }
+    });
+  } catch (err) {
+    countsMap['All'] = inMemoryBlogs.length;
+    inMemoryBlogs.forEach(b => {
+      if (b.category) {
+        countsMap[b.category] = (countsMap[b.category] || 0) + 1;
+      }
+    });
+  }
+
+  return countsMap;
+}
+
+// Helper to format consistent Blog JSON payload
+function formatBlogResponse(b) {
+  const likesCount = typeof b.real_likes_count === 'number' ? Number(b.real_likes_count) : (b.likes_count || b.likes || 0);
+  const commentsCount = typeof b.real_comments_count === 'number' ? Number(b.real_comments_count) : (b.comments_count || b.comments || 0);
+
+  return {
+    id: b.id,
+    title: b.title,
+    category: b.category,
+    coverImage: b.cover_image || b.coverImage,
+    description: b.description || b.excerpt,
+    excerpt: b.description ? (b.description.slice(0, 140) + '...') : '',
+    author: {
+      id: b.author_id,
+      name: b.live_author_name || b.author_name || (b.author ? b.author.name : 'Anonymous Author'),
+      avatar: b.live_author_avatar || b.author_avatar || (b.author ? b.author.avatar : null)
+    },
+    readTime: b.read_time || b.readTime || '5 min read',
+    likes: likesCount,
+    comments: commentsCount,
+    createdAt: b.created_at || b.createdAt || new Date().toISOString()
+  };
 }
 
 module.exports = {
   createBlogInDb,
-  getAllBlogsFromDb
+  getBlogsFromDb,
+  getBlogByIdFromDb,
+  toggleLikeBlogInDb,
+  getCategoryCountsFromDb
 };

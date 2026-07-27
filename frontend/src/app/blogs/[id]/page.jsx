@@ -1,6 +1,6 @@
 'use client';
 
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import Header from '../../../components/Header';
 import Footer from '../../../components/Footer';
 import BlogCard from '../../../components/BlogCard';
@@ -11,185 +11,237 @@ import FavouriteButton from '../../../components/FavouriteButton';
 import SubscribeButton from '../../../components/SubscribeButton';
 import CommentSection from '../../../components/CommentSection';
 import Modal from '../../../components/Modal';
+import { fetchBlogByIdApi, fetchBlogsApi } from '../../../services/blogService';
+import { getSocket } from '../../../services/socketService';
 import { 
   ArrowLeft, 
   Calendar, 
   Clock, 
   Tag, 
-  BookOpen 
+  BookOpen,
+  Loader2
 } from 'lucide-react';
-
-// Sample Detailed Post
-const BLOG_POST = {
-  id: 1,
-  title: "Building High-Performance Full Stack Web Apps in 2026",
-  coverImage: "https://images.unsplash.com/photo-1555066931-4365d14bab8c?w=1200&auto=format&fit=crop&q=80",
-  category: "Technology",
-  publishDate: "July 24, 2026",
-  readTime: "6 min read",
-  author: {
-    id: "author_john_smith",
-    name: "John Smith",
-    role: "Senior Software Architect & Tech Essayist",
-    avatar: "https://images.unsplash.com/photo-1534528741775-53994a69daeb?w=200&auto=format&fit=crop&q=80",
-    bio: "Passionate about full-stack engineering, web performance, and distributed backend systems."
-  },
-  content: [
-    "Modern web application development has evolved exponentially over the past few years. Building responsive, highly interactive, and lightning-fast full stack applications requires careful architectural choices across the frontend UI, middleware, API design, and database queries.",
-    "Using Next.js alongside Express and MySQL provides an unmatched developer experience paired with outstanding runtime performance. By leveraging server-side rendering, component-driven layouts, and connection pools, applications achieve sub-second page loads and seamless user engagement.",
-    "State management, caching layers, and responsive CSS systems (such as Tailwind CSS and custom glassmorphism components) ensure your interface looks stunning across mobile screens, tablets, and desktop displays.",
-    "In conclusion, prioritizing modular component design, resilient authentication (such as Twilio OTP and JWTs), and strict input validation empowers engineering teams to ship production-ready web apps with confidence."
-  ],
-  likes: 142
-};
-
-// Sample Related Blogs
-const RELATED_BLOGS = [
-  {
-    id: 2,
-    title: "The Next Era of Artificial Intelligence: Agentic Systems",
-    excerpt: "How autonomous agent workflows are reinventing software engineering and human-computer interfaces.",
-    category: "Artificial Intelligence",
-    author: {
-      name: "Marcus Chen",
-      avatar: "https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?w=150&auto=format&fit=crop&q=80"
-    },
-    coverImage: "https://images.unsplash.com/photo-1618005182384-a83a8bd57fbe?w=800&auto=format&fit=crop&q=80",
-    likes: 215,
-    comments: 42
-  },
-  {
-    id: 3,
-    title: "Mastering Clean Code & Refactoring in Modern JavaScript",
-    excerpt: "Delight your visitors and maintain code scalability with proven design patterns and functional modularity.",
-    category: "Programming",
-    author: {
-      name: "Elena Rostova",
-      avatar: "https://images.unsplash.com/photo-1534528741775-53994a69daeb?w=150&auto=format&fit=crop&q=80"
-    },
-    coverImage: "https://images.unsplash.com/photo-1507238691740-187a5b1d37b8?w=800&auto=format&fit=crop&q=80",
-    likes: 98,
-    comments: 14
-  }
-];
 
 export default function BlogDetailsPage({ params }) {
   const blogId = params?.id || '1';
+  const [blog, setBlog] = useState(null);
+  const [loading, setLoading] = useState(true);
+  const [relatedBlogs, setRelatedBlogs] = useState([]);
+
   const [isAuthModalOpen, setIsAuthModalOpen] = useState(false);
-  const [commentCount, setCommentCount] = useState(2);
+  const [authModalMode, setAuthModalMode] = useState('login');
+  const [commentCount, setCommentCount] = useState(0);
+  const [scrollProgress, setScrollProgress] = useState(0);
+
+  const handleOpenAuthModal = (mode = 'login') => {
+    setAuthModalMode(mode);
+    setIsAuthModalOpen(true);
+  };
+
+  useEffect(() => {
+    async function loadData() {
+      setLoading(true);
+      const res = await fetchBlogByIdApi(blogId);
+      if (res && res.success && res.blog) {
+        setBlog(res.blog);
+        setCommentCount(res.blog.comments || 0);
+
+        // Fetch related blogs in same category
+        if (res.blog.category) {
+          const relRes = await fetchBlogsApi(res.blog.category, 1, 4);
+          if (relRes && relRes.success && Array.isArray(relRes.data)) {
+            setRelatedBlogs(relRes.data.filter(b => String(b.id) !== String(blogId)));
+          }
+        }
+      }
+      setLoading(false);
+    }
+    loadData();
+  }, [blogId]);
+
+  // Join Socket Room for Real-Time Article Sync
+  useEffect(() => {
+    if (!blogId) return;
+    const socket = getSocket();
+    socket.emit('join_blog', blogId);
+
+    const handleBlogLiked = (data) => {
+      if (Number(data.blogId) === Number(blogId)) {
+        setBlog(prev => prev ? { ...prev, likes: data.likesCount } : null);
+      }
+    };
+
+    socket.on('blog:liked', handleBlogLiked);
+
+    return () => {
+      socket.emit('leave_blog', blogId);
+      socket.off('blog:liked', handleBlogLiked);
+    };
+  }, [blogId]);
+
+  useEffect(() => {
+    const handleScroll = () => {
+      const totalHeight = document.documentElement.scrollHeight - window.innerHeight;
+      if (totalHeight > 0) {
+        setScrollProgress((window.scrollY / totalHeight) * 100);
+      }
+    };
+    window.addEventListener('scroll', handleScroll, { passive: true });
+    return () => window.removeEventListener('scroll', handleScroll);
+  }, []);
+
+  if (loading) {
+    return (
+      <div className="min-h-screen flex flex-col justify-between bg-[#FEF9C3]">
+        <Header onOpenAuthModal={handleOpenAuthModal} />
+        <main className="max-w-3xl mx-auto px-4 py-20 text-center flex-1 flex flex-col items-center justify-center space-y-3">
+          <Loader2 className="w-6 h-6 animate-spin text-[#ff9432]" />
+          <p className="text-xs font-semibold text-slate-600">Loading article details...</p>
+        </main>
+        <Footer />
+      </div>
+    );
+  }
+
+  if (!blog) {
+    return (
+      <div className="min-h-screen flex flex-col justify-between bg-[#FEF9C3]">
+        <Header onOpenAuthModal={handleOpenAuthModal} />
+        <main className="max-w-3xl mx-auto px-4 py-20 text-center flex-1 space-y-4">
+          <h2 className="text-xl font-bold text-slate-900">Article Not Found</h2>
+          <p className="text-xs text-slate-500">The article you are looking for does not exist or has been removed.</p>
+          <div>
+            <a href="/" className="px-4 py-2 rounded-lg bg-[#ff9432] text-white text-xs font-semibold">
+              Return Home
+            </a>
+          </div>
+        </main>
+        <Footer />
+      </div>
+    );
+  }
+
+  const authorName = blog.author?.name || 'Anonymous Author';
+  const authorAvatar = blog.author?.avatar;
+  const firstLetter = authorName.trim().charAt(0).toUpperCase() || 'A';
+  const formattedDate = blog.createdAt 
+    ? new Date(blog.createdAt).toLocaleDateString('en-US', { month: 'long', day: 'numeric', year: 'numeric' })
+    : 'Recently';
 
   return (
-    <div className="min-h-screen flex flex-col justify-between">
-      {/* Sticky Header */}
-      <Header onOpenAuthModal={() => setIsAuthModalOpen(true)} />
+    <div className="min-h-screen flex flex-col justify-between bg-[#FEF9C3]">
+      {/* Reading Progress Bar */}
+      <div 
+        className="fixed top-0 left-0 h-0.5 bg-[#ff9432] z-50 transition-all duration-150" 
+        style={{ width: `${scrollProgress}%` }}
+      />
 
-      {/* Main Blog Article Container */}
-      <main className="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8 py-10 flex-1 w-full space-y-10">
+      <Header onOpenAuthModal={handleOpenAuthModal} />
+
+      <main className="max-w-3xl mx-auto px-4 sm:px-6 lg:px-8 py-10 flex-1 w-full space-y-10">
         
-        {/* Back Navigation Link */}
+        {/* Back Link */}
         <div>
           <a
             href="/"
-            className="inline-flex items-center gap-2 px-4 py-2 rounded-xl text-xs font-semibold bg-slate-900 border border-slate-800 hover:border-slate-700 text-slate-300 hover:text-white transition-colors"
+            className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-medium bg-white border border-slate-200 text-slate-600 hover:text-slate-900 hover:border-slate-300 transition-colors shadow-xs"
           >
-            <ArrowLeft className="w-4 h-4 text-indigo-400" /> Back to All Stories
+            <ArrowLeft className="w-3.5 h-3.5" /> Back to Stories
           </a>
         </div>
 
-        {/* Article Meta Header */}
+        {/* Header */}
         <div className="space-y-4">
           <div className="flex flex-wrap items-center gap-3 text-xs">
-            <span className="px-3.5 py-1 rounded-full font-semibold bg-indigo-600/20 text-indigo-400 border border-indigo-500/30 flex items-center gap-1.5">
-              <Tag className="w-3.5 h-3.5" /> {BLOG_POST.category}
+            <span className="px-2.5 py-0.5 rounded-md font-semibold bg-amber-50 text-amber-900 border border-amber-200 flex items-center gap-1.5">
+              <Tag className="w-3 h-3 text-[#ff9432]" /> {blog.category}
             </span>
-            <span className="text-slate-400 flex items-center gap-1">
-              <Calendar className="w-3.5 h-3.5 text-purple-400" /> {BLOG_POST.publishDate}
+            <span className="text-slate-500 flex items-center gap-1">
+              <Calendar className="w-3 h-3" /> {formattedDate}
             </span>
-            <span className="text-slate-400 flex items-center gap-1">
-              <Clock className="w-3.5 h-3.5 text-pink-400" /> {BLOG_POST.readTime}
+            <span className="text-slate-500 flex items-center gap-1">
+              <Clock className="w-3 h-3" /> {blog.readTime || '5 min read'}
             </span>
           </div>
 
-          {/* Title */}
-          <h1 className="text-3xl sm:text-5xl font-extrabold text-white tracking-tight leading-tight">
-            {BLOG_POST.title}
+          <h1 className="text-3xl sm:text-4xl font-extrabold text-slate-900 tracking-tight leading-tight">
+            {blog.title}
           </h1>
 
-          {/* Author Card + Subscribe Feature */}
-          <div className="glass-panel rounded-2xl p-4 sm:p-5 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4 border border-slate-800">
-            <div className="flex items-center gap-3.5">
-              <img
-                src={BLOG_POST.author.avatar}
-                alt={BLOG_POST.author.name}
-                className="w-12 h-12 rounded-full object-cover border-2 border-indigo-500/40"
-              />
+          {/* Author Card */}
+          <div className="p-4 rounded-xl bg-white border border-slate-200/90 flex items-center justify-between gap-4 shadow-xs">
+            <div className="flex items-center gap-3">
+              {authorAvatar ? (
+                <img
+                  src={authorAvatar}
+                  alt={authorName}
+                  className="w-10 h-10 rounded-full object-cover"
+                />
+              ) : (
+                <div className="w-10 h-10 rounded-full bg-[#ff9432] text-white font-bold flex items-center justify-center text-sm shadow-xs">
+                  {firstLetter}
+                </div>
+              )}
               <div>
-                <p className="text-xs text-slate-400">Written by</p>
-                <h4 className="text-base font-bold text-white">{BLOG_POST.author.name}</h4>
-                <p className="text-[11px] text-slate-400">{BLOG_POST.author.role}</p>
+                <h4 className="text-sm font-semibold text-slate-900">{authorName}</h4>
+                <p className="text-xs text-slate-500">Registered Author</p>
               </div>
             </div>
 
-            {/* Author Subscribe Button */}
-            <div>
-              <SubscribeButton authorId={BLOG_POST.author.id} compact />
-            </div>
+            <SubscribeButton authorId={blog.author?.id || 'author'} compact />
           </div>
         </div>
 
-        {/* Blog Image */}
-        <div className="relative h-64 sm:h-96 w-full rounded-3xl overflow-hidden bg-slate-900 border border-slate-800 shadow-2xl">
-          <img
-            src={BLOG_POST.coverImage}
-            alt={BLOG_POST.title}
-            className="w-full h-full object-cover"
-          />
-        </div>
+        {/* Cover Image */}
+        {blog.coverImage && (
+          <div className="relative aspect-[16/9] w-full rounded-xl overflow-hidden bg-slate-100 border border-slate-200">
+            <img
+              src={blog.coverImage}
+              alt={blog.title}
+              className="w-full h-full object-cover"
+            />
+          </div>
+        )}
 
-        {/* Action Bar (Like, Comment, Favourite, Share) */}
-        <div className="glass-panel rounded-2xl p-4 flex items-center justify-between border border-slate-800">
-          <div className="flex items-center gap-3">
-            <LikeButton initialLikes={BLOG_POST.likes} />
+        {/* Action Toolbar */}
+        <div className="p-3 rounded-xl bg-white border border-slate-200/90 flex items-center justify-between shadow-xs">
+          <div className="flex items-center gap-2">
+            <LikeButton blogId={blog.id} initialLikes={blog.likes || 0} />
             <CommentButton count={commentCount} />
           </div>
-          <div className="flex items-center gap-2">
-            <FavouriteButton />
-            <ShareButton title={BLOG_POST.title} />
+          <div className="flex items-center gap-1.5">
+            <FavouriteButton blogId={blog.id} />
+            <ShareButton title={blog.title} />
           </div>
         </div>
 
-        {/* Full Article Content */}
-        <article className="glass-panel rounded-3xl p-6 sm:p-10 border border-slate-800 space-y-6 text-slate-200 leading-relaxed text-base sm:text-lg">
-          {BLOG_POST.content.map((paragraph, index) => (
-            <p key={index} className="text-slate-300">
-              {paragraph}
-            </p>
-          ))}
+        {/* Article Body */}
+        <article className="article-body py-2 text-slate-800 whitespace-pre-line">
+          {blog.description}
         </article>
 
-        {/* Interactive Comment Section (Add, Edit, Delete, Reply, Comment Count) */}
+        {/* Comments */}
         <CommentSection blogId={blogId} onCountChange={(cnt) => setCommentCount(cnt)} />
 
-        {/* Related Blogs Section */}
-        <section className="space-y-6 pt-6">
-          <div className="flex items-center gap-2">
-            <BookOpen className="w-5 h-5 text-purple-400" />
-            <h3 className="text-2xl font-bold text-white">Related Blogs</h3>
-          </div>
+        {/* Related Stories */}
+        {relatedBlogs.length > 0 && (
+          <section className="space-y-4 pt-4">
+            <div className="flex items-center gap-2">
+              <BookOpen className="w-4 h-4 text-[#ff9432]" />
+              <h3 className="text-lg font-bold text-slate-900 tracking-tight">More in {blog.category}</h3>
+            </div>
 
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-            {RELATED_BLOGS.map((blog) => (
-              <BlogCard key={blog.id} blog={blog} />
-            ))}
-          </div>
-        </section>
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+              {relatedBlogs.map((relBlog) => (
+                <BlogCard key={relBlog.id} blog={relBlog} />
+              ))}
+            </div>
+          </section>
+        )}
 
       </main>
 
-      {/* Global Auth Modal */}
-      <Modal isOpen={isAuthModalOpen} onClose={() => setIsAuthModalOpen(false)} />
-
-      {/* Footer */}
+      <Modal isOpen={isAuthModalOpen} onClose={() => setIsAuthModalOpen(false)} initialMode={authModalMode} />
       <Footer />
     </div>
   );

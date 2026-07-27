@@ -2,27 +2,23 @@
  * Form Validation Utilities for BlogVerse Auth
  */
 
-export function validatePhone(phone) {
-  if (!phone || !phone.trim()) {
-    return 'Phone number is required.';
+export function validateFullName(name) {
+  if (!name || !name.trim()) {
+    return 'Full name is required.';
   }
-  const cleanPhone = phone.replace(/\s+/g, '');
-  const phoneRegex = /^\+?[1-9]\d{7,14}$/;
-  if (!phoneRegex.test(cleanPhone)) {
-    return 'Please enter a valid phone number with country code (e.g. +1234567890).';
+  if (name.trim().length < 2) {
+    return 'Full name must be at least 2 characters long.';
   }
   return null;
 }
 
-export function validateUsername(username) {
-  if (!username || !username.trim()) {
-    return 'Username is required.';
+export function validateEmail(email) {
+  if (!email || !email.trim()) {
+    return 'Email address is required.';
   }
-  if (username.trim().length < 3) {
-    return 'Username must be at least 3 characters long.';
-  }
-  if (!/^[a-zA-Z0-9_]+$/.test(username.trim())) {
-    return 'Username can only contain letters, numbers, and underscores.';
+  const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+  if (!emailRegex.test(email.trim())) {
+    return 'Please enter a valid email address (e.g. user@example.com).';
   }
   return null;
 }

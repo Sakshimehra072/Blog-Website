@@ -9,19 +9,18 @@ module.exports = {
   theme: {
     extend: {
       colors: {
-        brand: {
-          50: '#f0f4ff',
-          100: '#e0e9ff',
-          500: '#6366f1',
-          600: '#4f46e5',
-          700: '#4338ca',
+        accent: {
+          DEFAULT: '#ff9432',
+          hover: '#e88325',
+          light: '#fff4ea',
+          border: '#ffe2c7'
         },
-        dark: {
-          bg: '#0f172a',
-          card: '#1e293b',
-          border: '#334155',
-          text: '#f8fafc',
-          muted: '#94a3b8'
+        brand: {
+          50: '#fff4ea',
+          100: '#ffe2c7',
+          500: '#ff9432',
+          600: '#ff9432',
+          700: '#e88325',
         }
       },
       fontFamily: {
@@ -29,10 +28,6 @@ module.exports = {
       },
       backdropBlur: {
         xs: '2px',
-      },
-      boxShadow: {
-        glass: '0 8px 32px 0 rgba(31, 38, 135, 0.15)',
-        'glass-dark': '0 8px 32px 0 rgba(0, 0, 0, 0.4)',
       }
     },
   },

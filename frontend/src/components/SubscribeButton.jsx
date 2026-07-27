@@ -37,7 +37,6 @@ export default function SubscribeButton({ authorId = 'author_john_smith', compac
         setCount(prev => (res.isSubscribed ? prev + 1 : prev - 1));
       }
     } else {
-      // Local toggle fallback
       setSubscribed(prev => !prev);
       setCount(prev => (subscribed ? prev - 1 : prev + 1));
     }
@@ -48,21 +47,21 @@ export default function SubscribeButton({ authorId = 'author_john_smith', compac
       <button
         onClick={handleToggle}
         disabled={loading}
-        className={`px-3.5 py-1.5 rounded-xl text-xs font-semibold flex items-center gap-1.5 transition-all ${
+        className={`px-3 py-1.5 rounded-lg text-xs font-semibold flex items-center gap-1.5 transition-colors ${
           subscribed
-            ? 'bg-emerald-500/20 text-emerald-400 border border-emerald-500/40'
-            : 'gradient-btn'
+            ? 'bg-slate-100 text-slate-700 border border-slate-300'
+            : 'bg-[#ff9432] hover:bg-[#e88325] text-white shadow-xs'
         }`}
       >
         {loading ? (
           <Loader2 className="w-3.5 h-3.5 animate-spin" />
         ) : subscribed ? (
           <>
-            <Check className="w-3.5 h-3.5 text-emerald-400" /> Subscribed ({count})
+            <Check className="w-3.5 h-3.5 text-emerald-600" /> Subscribed ({count})
           </>
         ) : (
           <>
-            <UserPlus className="w-3.5 h-3.5 text-white" /> Subscribe ({count})
+            <UserPlus className="w-3.5 h-3.5" /> Follow ({count})
           </>
         )}
       </button>
@@ -72,30 +71,30 @@ export default function SubscribeButton({ authorId = 'author_john_smith', compac
   return (
     <form onSubmit={handleToggle} className="flex gap-2 w-full max-w-md">
       <div className="relative flex-1">
-        <Mail className="absolute left-3.5 top-1/2 -translate-y-1/2 text-slate-400 w-4 h-4" />
+        <Mail className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400 w-3.5 h-3.5" />
         <input
           type="email"
           value={email}
           onChange={(e) => setEmail(e.target.value)}
-          placeholder="Enter your email for updates"
+          placeholder="Enter your email"
           disabled={subscribed}
-          className="w-full bg-slate-900 border border-slate-700/70 rounded-xl pl-10 pr-3 py-2 text-xs text-white placeholder-slate-400 focus:outline-none focus:border-indigo-500"
+          className="w-full bg-slate-50 border border-slate-200 rounded-lg pl-9 pr-3 py-1.5 text-xs text-slate-900 placeholder-slate-400 focus:outline-none focus:border-[#ff9432] focus:bg-white"
         />
       </div>
       <button
         type="submit"
         disabled={loading}
-        className={`px-4 py-2 rounded-xl text-xs font-semibold flex items-center justify-center gap-1.5 min-w-[110px] ${
+        className={`px-4 py-1.5 rounded-lg text-xs font-semibold flex items-center justify-center gap-1.5 shrink-0 ${
           subscribed
-            ? 'bg-emerald-500/20 text-emerald-400 border border-emerald-500/30'
-            : 'gradient-btn'
+            ? 'bg-slate-100 text-slate-700 border border-slate-300'
+            : 'bg-[#ff9432] hover:bg-[#e88325] text-white shadow-xs'
         }`}
       >
         {loading ? (
-          <Loader2 className="w-4 h-4 animate-spin" />
+          <Loader2 className="w-3.5 h-3.5 animate-spin" />
         ) : subscribed ? (
           <>
-            <Check className="w-3.5 h-3.5" /> Subscribed ({count})
+            <Check className="w-3.5 h-3.5 text-emerald-600" /> Subscribed ({count})
           </>
         ) : (
           'Subscribe'

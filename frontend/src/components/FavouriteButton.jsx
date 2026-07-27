@@ -1,7 +1,7 @@
 'use client';
 
 import React, { useState } from 'react';
-import { Bookmark, CheckCircle2, Trash2 } from 'lucide-react';
+import { Bookmark, CheckCircle2 } from 'lucide-react';
 import { toggleFavouriteApi } from '../services/favouriteService';
 
 export default function FavouriteButton({ blogId = 1, isSaved = false, onToggle, showToast = true }) {
@@ -14,7 +14,7 @@ export default function FavouriteButton({ blogId = 1, isSaved = false, onToggle,
     setToastMessage(msg);
     setTimeout(() => {
       setToastMessage('');
-    }, 2500);
+    }, 2200);
   };
 
   const handleToggle = async (e) => {
@@ -31,9 +31,9 @@ export default function FavouriteButton({ blogId = 1, isSaved = false, onToggle,
     setSaved(isNowSaved);
 
     if (isNowSaved) {
-      triggerToast('✅ Blog saved successfully.');
+      triggerToast('Article saved to your reading list');
     } else {
-      triggerToast('✅ Blog removed from Saved Blogs.');
+      triggerToast('Article removed from saved list');
     }
 
     if (onToggle) onToggle(isNowSaved);
@@ -45,20 +45,20 @@ export default function FavouriteButton({ blogId = 1, isSaved = false, onToggle,
         type="button"
         onClick={handleToggle}
         disabled={loading}
-        className={`p-2 rounded-xl text-xs transition-all duration-200 ${
+        className={`p-1.5 rounded-md text-xs transition-colors duration-150 ${
           saved
-            ? 'bg-indigo-500/20 text-indigo-400 border border-indigo-500/40 shadow-sm'
-            : 'bg-slate-900/80 text-slate-400 border border-slate-800 hover:text-slate-200 hover:border-slate-700'
+            ? 'bg-amber-50 text-[#ff9432] border border-[#ff9432]/40'
+            : 'bg-slate-100/90 text-slate-600 border border-slate-200 hover:text-slate-900 hover:border-slate-300'
         }`}
-        title={saved ? "Remove from Saved Blogs" : "Save Blog"}
+        title={saved ? "Remove from Saved" : "Save Article"}
       >
-        <Bookmark className={`w-4 h-4 ${saved ? 'fill-indigo-500 text-indigo-400 animate-bounce' : ''}`} />
+        <Bookmark className={`w-3.5 h-3.5 ${saved ? 'fill-[#ff9432] text-[#ff9432]' : ''}`} />
       </button>
 
-      {/* Floating Toast Notification */}
+      {/* Light Theme Toast */}
       {toastMessage && (
-        <div className="fixed bottom-6 right-6 z-50 px-4 py-3 rounded-2xl glass-panel border border-indigo-500/40 bg-slate-950/90 text-white text-xs font-semibold shadow-2xl flex items-center gap-2 animate-in fade-in slide-in-from-bottom-3 duration-200">
-          <CheckCircle2 className="w-4 h-4 text-emerald-400 shrink-0" />
+        <div className="fixed bottom-6 right-6 z-50 px-4 py-2.5 rounded-lg bg-white border border-slate-200 text-slate-900 text-xs font-medium shadow-lg flex items-center gap-2 animate-in fade-in duration-150">
+          <CheckCircle2 className="w-3.5 h-3.5 text-[#ff9432] shrink-0" />
           <span>{toastMessage}</span>
         </div>
       )}

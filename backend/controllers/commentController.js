@@ -23,8 +23,9 @@ async function handleGetComments(req, res) {
 async function handleAddComment(req, res) {
   try {
     const { blogId, text, parentId, authorName, authorAvatar } = req.body;
-    const userId = req.user ? req.user.id : (req.body.userId || 'guest_user');
-    const name = req.user ? req.user.username : (authorName || 'Anonymous Reader');
+    const userId = req.user ? req.user.id : (req.body.userId || null);
+    const name = req.user ? (req.user.name || req.user.username) : (authorName || 'Anonymous Reader');
+    const avatar = req.user ? (req.user.avatar_url || req.user.avatar) : authorAvatar;
 
     if (!blogId) {
       return res.status(400).json({ success: false, message: 'Blog ID is required.' });
@@ -37,10 +38,15 @@ async function handleAddComment(req, res) {
       blogId,
       userId,
       authorName: name,
-      authorAvatar,
+      authorAvatar: avatar,
       text: text.trim(),
       parentId
     });
+
+    // Real-time Socket broadcast
+    if (req.io) {
+      req.io.emit('comment:added', { blogId: String(blogId), comment: newComment });
+    }
 
     res.status(201).json({
       success: true,
