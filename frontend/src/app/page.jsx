@@ -1,6 +1,6 @@
 'use client';
 
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useCallback } from 'react';
 import Header from '../components/Header';
 import Footer from '../components/Footer';
 import BlogCard from '../components/BlogCard';
@@ -89,8 +89,8 @@ export default function HomePage() {
     setIsAuthModalOpen(true);
   };
 
-  const loadBlogs = async () => {
-    setLoading(true);
+  const loadBlogs = useCallback(async (showLoading = true) => {
+    if (showLoading) setLoading(true);
     const queryCategory = (activeCategory === 'All' || !activeCategory) ? null : activeCategory;
     const res = await fetchBlogsApi(queryCategory, page, 50);
     if (res && res.success && Array.isArray(res.data)) {
@@ -106,19 +106,40 @@ export default function HomePage() {
     } else {
       setBlogs([]);
     }
-    setLoading(false);
-  };
-
-  useEffect(() => {
-    loadBlogs();
+    if (showLoading) setLoading(false);
   }, [activeCategory, page]);
 
-  // Real-Time Socket Listener for Instant Post, Comment & Like Updates
+  useEffect(() => {
+    loadBlogs(true);
+  }, [loadBlogs]);
+
+  // Window Focus & Tab Visibility Re-fetching
+  useEffect(() => {
+    const handleFocus = () => {
+      loadBlogs(false);
+    };
+
+    const handleVisibility = () => {
+      if (document.visibilityState === 'visible') {
+        loadBlogs(false);
+      }
+    };
+
+    window.addEventListener('focus', handleFocus);
+    document.addEventListener('visibilitychange', handleVisibility);
+
+    return () => {
+      window.removeEventListener('focus', handleFocus);
+      document.removeEventListener('visibilitychange', handleVisibility);
+    };
+  }, [loadBlogs]);
+
+  // Real-Time Socket Listener for Instant Post, Comment & Like Updates Across All Users
   useEffect(() => {
     const socket = getSocket();
 
     const handleBlogPublished = (newBlog) => {
-      if (newBlog) {
+      if (newBlog && newBlog.id) {
         setBlogs(prev => [newBlog, ...prev.filter(b => Number(b.id) !== Number(newBlog.id))]);
         setCategoriesList(prev => prev.map(cat => {
           if (cat.id === 'All' || (newBlog.category && cat.name.toLowerCase() === newBlog.category.toLowerCase())) {
@@ -127,7 +148,7 @@ export default function HomePage() {
           return cat;
         }));
       } else {
-        loadBlogs();
+        loadBlogs(false);
       }
     };
 
@@ -167,7 +188,7 @@ export default function HomePage() {
       socket.off('comment:added', handleCommentAdded);
       socket.off('blog:liked', handleBlogLiked);
     };
-  }, [activeCategory]);
+  }, [loadBlogs]);
 
   const scrollToSearch = () => {
     const blogsEl = document.getElementById('blogs');
@@ -266,7 +287,7 @@ export default function HomePage() {
                     setActiveCategory('All');
                     setPage(1);
                   }}
-                  className="text-xs font-semibold px-3 py-1.5 rounded-lg bg-amber-50 text-amber-900 border border-amber-300 hover:bg-amber-100 transition-colors"
+                  className="text-xs font-semibold px-3 py-1.5 rounded-lg bg-amber-50 text-amber-900 border border-amber-200 hover:bg-amber-100 transition-colors"
                 >
                   Filtered: {activeCategory} × (Show All)
                 </button>
