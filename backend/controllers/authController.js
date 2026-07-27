@@ -113,13 +113,17 @@ async function loginController(req, res) {
     }
 
     const user = await findUserByEmailOrName(userIdentifier);
-    if (!user || !user.password_hash) {
-      return res.status(401).json({ success: false, message: 'Invalid name/email or password.' });
+    if (!user) {
+      return res.status(401).json({ success: false, message: 'No account found with this Name or Email address.' });
+    }
+
+    if (!user.password_hash) {
+      return res.status(401).json({ success: false, message: 'This account was created via Google. Please sign in using Google.' });
     }
 
     const isMatch = await bcrypt.compare(password, user.password_hash);
     if (!isMatch) {
-      return res.status(401).json({ success: false, message: 'Invalid name/email or password.' });
+      return res.status(401).json({ success: false, message: 'Incorrect password. Please verify your password and try again.' });
     }
 
     const token = generateToken(user);
