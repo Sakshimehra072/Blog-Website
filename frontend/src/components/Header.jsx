@@ -18,6 +18,15 @@ export default function Header({ onOpenAuthModal, onFocusSearch }) {
     if (onOpenAuthModal) onOpenAuthModal('register');
   };
 
+  const handleWriteClick = (e) => {
+    if (!isLoggedIn) {
+      e.preventDefault();
+      if (onOpenAuthModal) {
+        onOpenAuthModal('login', 'Please sign in or create an account to write and publish a blog.', '/write');
+      }
+    }
+  };
+
   return (
     <header className="sticky top-0 z-40 w-full bg-white/90 backdrop-blur-md border-b border-slate-200/80 shadow-xs">
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
@@ -51,12 +60,16 @@ export default function Header({ onOpenAuthModal, onFocusSearch }) {
                 <BookOpen className="w-4 h-4 text-slate-500" /> Blogs
               </a>
 
+              <a 
+                href="/write" 
+                onClick={handleWriteClick}
+                className="flex items-center gap-1.5 hover:text-[#ff9432] transition-colors text-slate-600"
+              >
+                <PenTool className="w-4 h-4 text-slate-500" /> Write Blog
+              </a>
+
               {isLoggedIn && (
                 <>
-                  <a href="/write" className="flex items-center gap-1.5 hover:text-[#ff9432] transition-colors text-slate-600">
-                    <PenTool className="w-4 h-4 text-slate-500" /> Write Blog
-                  </a>
-
                   <a href="/my-blogs" className="flex items-center gap-1.5 hover:text-[#ff9432] transition-colors text-slate-600">
                     <FolderEdit className="w-4 h-4 text-slate-500" /> My Blogs
                   </a>
@@ -126,16 +139,19 @@ export default function Header({ onOpenAuthModal, onFocusSearch }) {
               <BookOpen className="w-4 h-4 text-slate-500" /> Blogs
             </a>
 
+            <a 
+              href="/write" 
+              onClick={(e) => {
+                setIsMobileMenuOpen(false);
+                handleWriteClick(e);
+              }}
+              className="flex items-center gap-2.5 py-1.5 hover:text-[#ff9432] transition-colors"
+            >
+              <PenTool className="w-4 h-4 text-slate-500" /> Write Blog
+            </a>
+
             {isLoggedIn && (
               <>
-                <a 
-                  href="/write" 
-                  onClick={() => setIsMobileMenuOpen(false)}
-                  className="flex items-center gap-2.5 py-1.5 hover:text-[#ff9432] transition-colors"
-                >
-                  <PenTool className="w-4 h-4 text-slate-500" /> Write Blog
-                </a>
-
                 <a 
                   href="/my-blogs" 
                   onClick={() => setIsMobileMenuOpen(false)}

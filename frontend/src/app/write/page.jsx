@@ -1,6 +1,6 @@
 'use client';
 
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import Header from '../../components/Header';
 import Footer from '../../components/Footer';
 import Modal from '../../components/Modal';
@@ -40,7 +40,7 @@ const CATEGORIES = [
 ];
 
 export default function CreateBlogPage() {
-  const { user } = useAuth();
+  const { user, isLoggedIn, loading: authLoading } = useAuth();
   const [isAuthModalOpen, setIsAuthModalOpen] = useState(false);
   const [authModalMode, setAuthModalMode] = useState('login');
 
@@ -55,6 +55,13 @@ export default function CreateBlogPage() {
   const [loading, setLoading] = useState(false);
   const [errorMsg, setErrorMsg] = useState('');
   const [successMsg, setSuccessMsg] = useState('');
+
+  // Route Guard: Prompt login modal if user visits /write directly without authenticating
+  useEffect(() => {
+    if (!authLoading && !isLoggedIn) {
+      setIsAuthModalOpen(true);
+    }
+  }, [authLoading, isLoggedIn]);
 
   const handleOpenAuthModal = (mode = 'login') => {
     setAuthModalMode(mode);
@@ -100,6 +107,11 @@ export default function CreateBlogPage() {
     if (e) e.preventDefault();
     setErrorMsg('');
     setSuccessMsg('');
+
+    if (!isLoggedIn) {
+      setIsAuthModalOpen(true);
+      return;
+    }
 
     if (!validateForm()) return;
 
@@ -317,7 +329,13 @@ export default function CreateBlogPage() {
 
       </main>
 
-      <Modal isOpen={isAuthModalOpen} onClose={() => setIsAuthModalOpen(false)} initialMode={authModalMode} />
+      <Modal 
+        isOpen={isAuthModalOpen} 
+        onClose={() => setIsAuthModalOpen(false)} 
+        initialMode={authModalMode}
+        message="Please sign in or create an account to write and publish a blog."
+        redirectUrl="/write"
+      />
       <Footer />
     </div>
   );

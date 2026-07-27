@@ -7,6 +7,7 @@ import BlogCard from '../components/BlogCard';
 import CategoryScrollSection from '../components/CategoryScrollSection';
 import Pagination from '../components/Pagination';
 import Modal from '../components/Modal';
+import { useAuth } from '../context/AuthContext';
 import { fetchBlogsApi } from '../services/blogService';
 import { getSocket } from '../services/socketService';
 import { 
@@ -58,8 +59,12 @@ const BASE_CATEGORIES = [
 ];
 
 export default function HomePage() {
+  const { isLoggedIn } = useAuth();
   const [isAuthModalOpen, setIsAuthModalOpen] = useState(false);
   const [authModalMode, setAuthModalMode] = useState('login');
+  const [authModalMessage, setAuthModalMessage] = useState('');
+  const [authModalRedirect, setAuthModalRedirect] = useState('');
+
   const [activeCategory, setActiveCategory] = useState('All');
   const [categoriesList, setCategoriesList] = useState(BASE_CATEGORIES);
   const [page, setPage] = useState(1);
@@ -84,9 +89,22 @@ export default function HomePage() {
     }
   }, []);
 
-  const handleOpenAuthModal = (mode = 'login') => {
+  const handleOpenAuthModal = (mode = 'login', msg = '', redirectUrl = '') => {
     setAuthModalMode(mode);
+    setAuthModalMessage(msg);
+    setAuthModalRedirect(redirectUrl);
     setIsAuthModalOpen(true);
+  };
+
+  const handleWriteArticleClick = (e) => {
+    if (!isLoggedIn) {
+      e.preventDefault();
+      handleOpenAuthModal('login', 'Please sign in or create an account to write and publish a blog.', '/write');
+    } else {
+      if (typeof window !== 'undefined') {
+        window.location.href = '/write';
+      }
+    }
   };
 
   const loadBlogs = useCallback(async (showLoading = true) => {
@@ -236,12 +254,13 @@ export default function HomePage() {
             </p>
 
             <div className="pt-2 flex flex-wrap items-center gap-3">
-              <a
-                href="/write"
+              <button
+                type="button"
+                onClick={handleWriteArticleClick}
                 className="px-5 py-2.5 rounded-lg text-xs font-semibold bg-[#ff9432] hover:bg-[#e88325] text-white transition-all shadow-xs flex items-center gap-2"
               >
                 <PenTool className="w-3.5 h-3.5" /> Write Article
-              </a>
+              </button>
               
               <a 
                 href="#blogs"
@@ -338,7 +357,13 @@ export default function HomePage() {
 
       </main>
 
-      <Modal isOpen={isAuthModalOpen} onClose={() => setIsAuthModalOpen(false)} initialMode={authModalMode} />
+      <Modal 
+        isOpen={isAuthModalOpen} 
+        onClose={() => setIsAuthModalOpen(false)} 
+        initialMode={authModalMode}
+        message={authModalMessage}
+        redirectUrl={authModalRedirect}
+      />
       <Footer />
     </div>
   );
