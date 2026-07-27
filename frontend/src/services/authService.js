@@ -1,13 +1,11 @@
 function getBaseUrl() {
   if (typeof window !== 'undefined') {
-    if (process.env.NEXT_PUBLIC_API_URL) {
-      let clean = process.env.NEXT_PUBLIC_API_URL.replace(/^\/+/, '').replace(/\/+$/, '');
-      if (!clean.endsWith('/api')) clean = `${clean}/api`;
-      return clean.startsWith('http') ? clean : `https://${clean}`;
+    const host = window.location.hostname;
+    if (host === 'localhost' || host === '127.0.0.1') {
+      return (process.env.NEXT_PUBLIC_API_URL || 'http://localhost:5000/api').replace(/\/+$/, '');
     }
-    return '/api';
   }
-  return process.env.NEXT_PUBLIC_API_URL || 'http://localhost:5000/api';
+  return (process.env.NEXT_PUBLIC_API_URL || 'https://blog-website-rccc.vercel.app/api').replace(/\/+$/, '');
 }
 
 const BASE_URL = getBaseUrl();

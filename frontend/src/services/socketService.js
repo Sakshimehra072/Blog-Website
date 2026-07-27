@@ -2,12 +2,13 @@ import { io } from 'socket.io-client';
 
 function getSocketUrl() {
   if (typeof window !== 'undefined') {
-    if (process.env.NEXT_PUBLIC_SOCKET_URL) {
-      return process.env.NEXT_PUBLIC_SOCKET_URL.replace(/\/+$/, '');
+    const host = window.location.hostname;
+    if (host === 'localhost' || host === '127.0.0.1') {
+      return (process.env.NEXT_PUBLIC_SOCKET_URL || 'http://localhost:5000').replace(/\/+$/, '');
     }
-    return window.location.origin;
+    return (process.env.NEXT_PUBLIC_SOCKET_URL || 'https://blog-website-rccc.vercel.app').replace(/\/+$/, '');
   }
-  return 'http://localhost:5000';
+  return process.env.NEXT_PUBLIC_SOCKET_URL || 'http://localhost:5000';
 }
 
 let socket = null;

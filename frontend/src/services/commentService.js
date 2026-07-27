@@ -1,9 +1,13 @@
-const rawUrl = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:5000/api';
-let cleanUrl = rawUrl.replace(/^\/+/, '').replace(/\/+$/, '');
-if (!cleanUrl.endsWith('/api')) {
-  cleanUrl = `${cleanUrl}/api`;
+function getCommentBaseUrl() {
+  if (typeof window !== 'undefined') {
+    const host = window.location.hostname;
+    if (host === 'localhost' || host === '127.0.0.1') {
+      return (process.env.NEXT_PUBLIC_API_URL || 'http://localhost:5000/api').replace(/\/+$/, '');
+    }
+  }
+  return (process.env.NEXT_PUBLIC_API_URL || 'https://blog-website-rccc.vercel.app/api').replace(/\/+$/, '');
 }
-const BASE_URL = cleanUrl.startsWith('http') ? cleanUrl : `https://${cleanUrl}`;
+const BASE_URL = getCommentBaseUrl().endsWith('/api') ? getCommentBaseUrl() : `${getCommentBaseUrl()}/api`;
 
 const API_COMMENTS_URL = `${BASE_URL}/comments`;
 
