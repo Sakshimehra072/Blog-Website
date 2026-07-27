@@ -1,49 +1,25 @@
 import { NextResponse } from 'next/server';
 
-const KV_ENDPOINT = 'https://kvdb.io/BlogVerseAppDB2026/published_blogs';
+function getBackendUrl() {
+  const envUrl = process.env.BACKEND_URL || process.env.NEXT_PUBLIC_API_URL || 'http://localhost:5000';
+  let clean = envUrl.replace(/\/+$/, '');
+  if (clean.endsWith('/api')) {
+    clean = clean.replace(/\/api$/, '');
+  }
+  return clean;
+}
 
 export async function GET(request, { params }) {
   const { id } = params;
-  const targetId = String(id);
-
   try {
-    const res = await fetch(KV_ENDPOINT, { cache: 'no-store' });
-    if (res.ok) {
-      const data = await res.json();
-      if (Array.isArray(data)) {
-        const match = data.find(b => String(b.id) === targetId);
-        if (match) {
-          return NextResponse.json({
-            success: true,
-            blog: match
-          });
-        }
-      }
-    }
-  } catch (err) {}
-
-  const store = globalThis._globalBlogsStore || [];
-  const match = store.find(b => String(b.id) === targetId);
-
-  if (match) {
-    return NextResponse.json({
-      success: true,
-      blog: match
-    });
-  }
-
-  // Fallback forward to Express Node.js backend
-  const backendUrl = process.env.BACKEND_URL || 'http://localhost:5000';
-  try {
+    const backendUrl = getBackendUrl();
     const res = await fetch(`${backendUrl}/api/blogs/${id}`, { cache: 'no-store' });
     if (res.ok) {
       const data = await res.json();
       return NextResponse.json(data);
     }
-  } catch (err) {}
-
-  return NextResponse.json({
-    success: false,
-    message: 'Article not found.'
-  }, { status: 404 });
+    return NextResponse.json({ success: false, message: 'Article not found.' }, { status: res.status });
+  } catch (err) {
+    return NextResponse.json({ success: false, message: 'Failed to fetch article from database.' }, { status: 500 });
+  }
 }
