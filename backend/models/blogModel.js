@@ -1,10 +1,36 @@
 const { pool } = require('../config/database');
+const fs = require('fs');
+const path = require('path');
 
-// Pure Database & In-Memory Store for Real Registered User Blogs
-const inMemoryBlogs = [];
-const inMemoryLikes = []; // { user_id, blog_id }
+const DATA_DIR = path.join(__dirname, '../data');
+const FILE_PATH = path.join(DATA_DIR, 'blogs.json');
 
-// 1. Create a new blog post for real registered user (ALWAYS INSERT new database row)
+// Ensure data directory and persistent file exist on backend
+if (!fs.existsSync(DATA_DIR)) {
+  try { fs.mkdirSync(DATA_DIR, { recursive: true }); } catch (e) {}
+}
+
+function readPersistentBlogs() {
+  try {
+    if (fs.existsSync(FILE_PATH)) {
+      const raw = fs.readFileSync(FILE_PATH, 'utf8');
+      return raw ? JSON.parse(raw) : [];
+    }
+  } catch (e) {}
+  return [];
+}
+
+function writePersistentBlogs(blogs) {
+  try {
+    fs.writeFileSync(FILE_PATH, JSON.stringify(blogs, null, 2), 'utf8');
+  } catch (e) {}
+}
+
+// In-Memory Backup initialized from persistent file
+const persistentBlogs = readPersistentBlogs();
+const inMemoryLikes = [];
+
+// 1. Create a new blog post for real registered user (INSERT database row & save to persistent store)
 async function createBlogInDb({ title, category, coverImage, description, authorId, authorName, authorAvatar, readTime }) {
   const cleanReadTime = readTime || '5 min read';
   const cleanCoverImage = coverImage || 'https://images.unsplash.com/photo-1499750310107-5fef28a66643?w=800&auto=format&fit=crop&q=80';
@@ -43,9 +69,11 @@ async function createBlogInDb({ title, category, coverImage, description, author
     newBlog.id = Date.now();
   }
 
-  // Retain in memory list as fallback to prevent any loss
-  if (!inMemoryBlogs.some(b => String(b.id) === String(newBlog.id))) {
-    inMemoryBlogs.unshift(newBlog);
+  // Save to persistent file storage to guarantee zero post loss across server restarts
+  const currentList = readPersistentBlogs();
+  if (!currentList.some(b => String(b.id) === String(newBlog.id))) {
+    currentList.unshift(newBlog);
+    writePersistentBlogs(currentList);
   }
 
   return formatBlogResponse(newBlog);
@@ -56,6 +84,14 @@ async function getBlogsFromDb({ category = null, page = 1, limit = 100 }) {
   const pageNum = Math.max(1, parseInt(page) || 1);
   const limitNum = Math.max(1, parseInt(limit) || 100);
   const offset = (pageNum - 1) * limitNum;
+
+  let allBlogsMap = new Map();
+
+  // Load from persistent backend file first
+  const fileBlogs = readPersistentBlogs();
+  fileBlogs.forEach(b => {
+    allBlogsMap.set(String(b.id), formatBlogResponse(b));
+  });
 
   try {
     let query = `
@@ -77,28 +113,21 @@ async function getBlogsFromDb({ category = null, page = 1, limit = 100 }) {
     query += ` ORDER BY b.created_at DESC LIMIT ${limitNum} OFFSET ${offset}`;
 
     const [rows] = await pool.query(query, params);
-    const dbBlogs = rows.map(formatBlogResponse);
-
-    // Merge in-memory fallback blogs to ensure zero post loss
-    inMemoryBlogs.forEach(m => {
-      if (!dbBlogs.some(b => String(b.id) === String(m.id))) {
-        if (!category || (m.category && m.category.toLowerCase() === category.trim().toLowerCase())) {
-          dbBlogs.push(formatBlogResponse(m));
-        }
-      }
+    rows.forEach(r => {
+      allBlogsMap.set(String(r.id), formatBlogResponse(r));
     });
+  } catch (err) {}
 
-    dbBlogs.sort((a, b) => new Date(b.createdAt || b.created_at) - new Date(a.createdAt || a.created_at));
-    return dbBlogs;
-  } catch (err) {
-    let filtered = [...inMemoryBlogs];
-    if (category && category.trim()) {
-      filtered = filtered.filter(b => b.category && b.category.toLowerCase() === category.trim().toLowerCase());
-    }
-    filtered.sort((a, b) => new Date(b.created_at || b.createdAt) - new Date(a.created_at || a.createdAt));
-    const sliced = filtered.slice(offset, offset + limitNum);
-    return sliced.map(formatBlogResponse);
+  let combined = Array.from(allBlogsMap.values());
+
+  if (category && category.trim()) {
+    combined = combined.filter(b => b.category && b.category.toLowerCase() === category.trim().toLowerCase());
   }
+
+  combined.sort((a, b) => new Date(b.createdAt || b.created_at) - new Date(a.createdAt || a.created_at));
+
+  const sliced = combined.slice(offset, offset + limitNum);
+  return sliced;
 }
 
 // 3. Fetch single blog by ID
@@ -121,8 +150,9 @@ async function getBlogByIdFromDb(blogId) {
     }
   } catch (err) {}
 
-  const blog = inMemoryBlogs.find(b => Number(b.id) === bId || String(b.id) === String(blogId));
-  if (blog) return formatBlogResponse(blog);
+  const fileBlogs = readPersistentBlogs();
+  const match = fileBlogs.find(b => Number(b.id) === bId || String(b.id) === String(blogId));
+  if (match) return formatBlogResponse(match);
   return null;
 }
 
@@ -153,10 +183,11 @@ async function toggleLikeBlogInDb(userId, blogId) {
 
     return { liked, likesCount };
   } catch (err) {
-    const index = inMemoryLikes.findIndex(l => Number(l.user_id) === uId && Number(l.blog_id) === bId);
-    const blog = inMemoryBlogs.find(b => Number(b.id) === bId);
+    const fileBlogs = readPersistentBlogs();
+    const blog = fileBlogs.find(b => Number(b.id) === bId);
     let liked = false;
 
+    const index = inMemoryLikes.findIndex(l => Number(l.user_id) === uId && Number(l.blog_id) === bId);
     if (index !== -1) {
       inMemoryLikes.splice(index, 1);
       if (blog) blog.likes_count = Math.max(0, (blog.likes_count || 1) - 1);
@@ -166,6 +197,7 @@ async function toggleLikeBlogInDb(userId, blogId) {
       if (blog) blog.likes_count = (blog.likes_count || 0) + 1;
       liked = true;
     }
+    writePersistentBlogs(fileBlogs);
 
     return { liked, likesCount: blog ? blog.likes_count : 0 };
   }
@@ -175,25 +207,26 @@ async function toggleLikeBlogInDb(userId, blogId) {
 async function getCategoryCountsFromDb() {
   const countsMap = {};
 
-  try {
-    const [totalRows] = await pool.query('SELECT COUNT(*) as total FROM blogs');
-    countsMap['All'] = totalRows.length > 0 ? totalRows[0].total : 0;
-
-    const [rows] = await pool.query('SELECT category, COUNT(*) as count FROM blogs GROUP BY category');
-    rows.forEach(r => {
-      if (r.category) {
-        countsMap[r.category] = r.count;
-      }
-    });
-  } catch (err) {}
-
-  inMemoryBlogs.forEach(b => {
+  const fileBlogs = readPersistentBlogs();
+  countsMap['All'] = fileBlogs.length;
+  fileBlogs.forEach(b => {
     if (b.category) {
       countsMap[b.category] = (countsMap[b.category] || 0) + 1;
     }
   });
 
-  countsMap['All'] = Math.max(countsMap['All'] || 0, inMemoryBlogs.length);
+  try {
+    const [totalRows] = await pool.query('SELECT COUNT(*) as total FROM blogs');
+    countsMap['All'] = Math.max(countsMap['All'] || 0, totalRows.length > 0 ? totalRows[0].total : 0);
+
+    const [rows] = await pool.query('SELECT category, COUNT(*) as count FROM blogs GROUP BY category');
+    rows.forEach(r => {
+      if (r.category) {
+        countsMap[r.category] = Math.max(countsMap[r.category] || 0, r.count);
+      }
+    });
+  } catch (err) {}
+
   return countsMap;
 }
 
