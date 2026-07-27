@@ -8,17 +8,17 @@ import Modal from '../../components/Modal';
 import { useAuth } from '../../context/AuthContext';
 import { fetchUserFavouritesApi } from '../../services/favouriteService';
 import { fetchBlogsApi } from '../../services/blogService';
-import { 
-  Mail, 
-  Calendar, 
-  BookOpen, 
-  Users, 
-  UserCheck, 
-  Bookmark, 
-  Edit3, 
-  CheckCircle2, 
-  Camera, 
-  Loader2 
+import {
+  Mail,
+  Calendar,
+  BookOpen,
+  Users,
+  UserCheck,
+  Bookmark,
+  Edit3,
+  CheckCircle2,
+  Camera,
+  Loader2
 } from 'lucide-react';
 
 export default function ProfilePage() {
@@ -79,7 +79,7 @@ export default function ProfilePage() {
       setLoadingMyBlogs(true);
       const blogsRes = await fetchBlogsApi(null, 1, 50);
       if (blogsRes && blogsRes.success && Array.isArray(blogsRes.data)) {
-        const userArticles = blogsRes.data.filter(b => 
+        const userArticles = blogsRes.data.filter(b =>
           (user && b.author && String(b.author.id) === String(user.id)) ||
           (user && b.author && b.author.name === (user.name || user.username))
         );
@@ -127,11 +127,11 @@ export default function ProfilePage() {
       <Header onOpenAuthModal={handleOpenAuthModal} />
 
       <main className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-10 flex-1 w-full space-y-8">
-        
+
         {/* Profile Card Header */}
         <section className="relative overflow-hidden rounded-2xl p-6 sm:p-8 bg-white border border-slate-200/90 shadow-xs">
           <div className="flex flex-col md:flex-row items-center md:items-start justify-between gap-6">
-            
+
             <div className="flex flex-col sm:flex-row items-center sm:items-start gap-5 text-center sm:text-left">
               <div className="relative group">
                 {displayAvatar ? (
@@ -215,18 +215,16 @@ export default function ProfilePage() {
           <div className="flex border-b border-slate-200 gap-6 text-xs font-semibold">
             <button
               onClick={() => setActiveTab('saved')}
-              className={`pb-2.5 flex items-center gap-1.5 transition-colors relative ${
-                activeTab === 'saved' ? 'text-[#ff9432] border-b-2 border-[#ff9432]' : 'text-slate-500 hover:text-slate-900'
-              }`}
+              className={`pb-2.5 flex items-center gap-1.5 transition-colors relative ${activeTab === 'saved' ? 'text-[#ff9432] border-b-2 border-[#ff9432]' : 'text-slate-500 hover:text-slate-900'
+                }`}
             >
               <Bookmark className="w-3.5 h-3.5" /> Saved Articles ({savedBlogs.length})
             </button>
 
             <button
               onClick={() => setActiveTab('my-blogs')}
-              className={`pb-2.5 flex items-center gap-1.5 transition-colors relative ${
-                activeTab === 'my-blogs' ? 'text-[#ff9432] border-b-2 border-[#ff9432]' : 'text-slate-500 hover:text-slate-900'
-              }`}
+              className={`pb-2.5 flex items-center gap-1.5 transition-colors relative ${activeTab === 'my-blogs' ? 'text-[#ff9432] border-b-2 border-[#ff9432]' : 'text-slate-500 hover:text-slate-900'
+                }`}
             >
               <BookOpen className="w-3.5 h-3.5" /> My Articles ({myBlogs.length})
             </button>
@@ -300,7 +298,7 @@ export default function ProfilePage() {
                   type="text"
                   value={editName}
                   onChange={(e) => setEditName(e.target.value)}
-                  placeholder="e.g. Alex Morgan"
+                  placeholder="Enter your name"
                   required
                   className="w-full bg-slate-50 border border-slate-200 rounded-lg px-3.5 py-2 text-xs text-slate-900 focus:outline-none focus:border-[#ff9432] focus:bg-white font-medium"
                 />

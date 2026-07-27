@@ -90,7 +90,7 @@ export default function BlogDetailsPage({ params }) {
 
   if (loading) {
     return (
-      <div className="min-h-screen flex flex-col justify-between bg-[#FEF9C3]">
+      <div className="min-h-screen flex flex-col justify-between bg-slate-50">
         <Header onOpenAuthModal={handleOpenAuthModal} />
         <main className="max-w-3xl mx-auto px-4 py-20 text-center flex-1 flex flex-col items-center justify-center space-y-3">
           <Loader2 className="w-6 h-6 animate-spin text-[#ff9432]" />
@@ -103,7 +103,7 @@ export default function BlogDetailsPage({ params }) {
 
   if (!blog) {
     return (
-      <div className="min-h-screen flex flex-col justify-between bg-[#FEF9C3]">
+      <div className="min-h-screen flex flex-col justify-between bg-slate-50">
         <Header onOpenAuthModal={handleOpenAuthModal} />
         <main className="max-w-3xl mx-auto px-4 py-20 text-center flex-1 space-y-4">
           <h2 className="text-xl font-bold text-slate-900">Article Not Found</h2>
@@ -127,7 +127,7 @@ export default function BlogDetailsPage({ params }) {
     : 'Recently';
 
   return (
-    <div className="min-h-screen flex flex-col justify-between bg-[#FEF9C3]">
+    <div className="min-h-screen flex flex-col justify-between bg-slate-50">
       <div 
         className="fixed top-0 left-0 h-0.5 bg-[#ff9432] z-50 transition-all duration-150" 
         style={{ width: `${scrollProgress}%` }}

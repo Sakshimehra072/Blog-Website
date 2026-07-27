@@ -105,12 +105,12 @@ export default function CategoryScrollSection({
 
         {/* Subtle Edge Fade Overlays */}
         <div 
-          className={`absolute left-0 top-0 bottom-0 w-5 bg-gradient-to-r from-[#FEF9C3] to-transparent z-10 pointer-events-none transition-opacity duration-200 ${
+          className={`absolute left-0 top-0 bottom-0 w-5 bg-gradient-to-r from-slate-50 to-transparent z-10 pointer-events-none transition-opacity duration-200 ${
             canScrollLeft ? 'opacity-100' : 'opacity-0'
           }`} 
         />
         <div 
-          className={`absolute right-0 top-0 bottom-0 w-5 bg-gradient-to-l from-[#FEF9C3] to-transparent z-10 pointer-events-none transition-opacity duration-200 ${
+          className={`absolute right-0 top-0 bottom-0 w-5 bg-gradient-to-l from-slate-50 to-transparent z-10 pointer-events-none transition-opacity duration-200 ${
             canScrollRight ? 'opacity-100' : 'opacity-0'
           }`} 
         />

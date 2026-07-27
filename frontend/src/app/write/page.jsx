@@ -155,7 +155,7 @@ export default function CreateBlogPage() {
   };
 
   return (
-    <div className="min-h-screen flex flex-col justify-between bg-[#FEF9C3]">
+    <div className="min-h-screen flex flex-col justify-between bg-slate-50">
       <Header onOpenAuthModal={handleOpenAuthModal} />
 
       <main className="max-w-3xl mx-auto px-4 sm:px-6 lg:px-8 py-10 flex-1 w-full space-y-6">

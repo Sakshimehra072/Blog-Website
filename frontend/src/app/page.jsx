@@ -227,7 +227,7 @@ export default function HomePage() {
   });
 
   return (
-    <div className="min-h-screen flex flex-col justify-between bg-[#FEF9C3]">
+    <div className="min-h-screen flex flex-col justify-between bg-slate-50">
       <Header onOpenAuthModal={handleOpenAuthModal} onFocusSearch={scrollToSearch} />
 
       {/* Floating Success Toast */}
