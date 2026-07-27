@@ -1,26 +1,8 @@
 import { NextResponse } from 'next/server';
 
-// Server-side persistent memory store for Next.js Vercel environment
+// Server-side persistent memory store for Next.js Vercel environment (Real User Blogs Only)
 if (!globalThis._globalBlogsStore) {
-  globalThis._globalBlogsStore = [
-    {
-      id: 1,
-      title: 'Building Modern Full-Stack Applications with Next.js & Express',
-      category: 'Technology',
-      coverImage: 'https://images.unsplash.com/photo-1555066931-4365d14bab8c?w=800&auto=format&fit=crop&q=80',
-      description: 'Modern full-stack web applications demand real-time interactivity, high performance, and robust architecture.',
-      excerpt: 'Modern full-stack web applications demand real-time interactivity, high performance, and robust architecture.',
-      author: {
-        id: 1,
-        name: 'Alex Morgan',
-        avatar: 'https://images.unsplash.com/photo-1534528741775-53994a69daeb?w=150&auto=format&fit=crop&q=80'
-      },
-      readTime: '5 min read',
-      likes: 14,
-      comments: 3,
-      createdAt: new Date(Date.now() - 3600000 * 2).toISOString()
-    }
-  ];
+  globalThis._globalBlogsStore = [];
 }
 
 export async function GET(request) {
