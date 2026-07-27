@@ -33,7 +33,8 @@ import {
   Camera,
   BookOpen,
   SearchX,
-  Home
+  Home,
+  CheckCircle2
 } from 'lucide-react';
 
 const BASE_CATEGORIES = [
@@ -65,12 +66,21 @@ export default function HomePage() {
   const [blogs, setBlogs] = useState([]);
   const [loading, setLoading] = useState(true);
   const [searchQuery, setSearchQuery] = useState('');
+  const [publishToast, setPublishToast] = useState('');
 
   useEffect(() => {
     if (typeof window !== 'undefined') {
       const params = new URLSearchParams(window.location.search);
       const q = params.get('search') || params.get('q') || '';
       setSearchQuery(q);
+
+      if (params.get('published') === 'true') {
+        setPublishToast('Blog published successfully!');
+        window.history.replaceState({}, '', '/#blogs');
+        setTimeout(() => {
+          setPublishToast('');
+        }, 4000);
+      }
     }
   }, []);
 
@@ -107,8 +117,18 @@ export default function HomePage() {
   useEffect(() => {
     const socket = getSocket();
 
-    const handleBlogPublished = () => {
-      loadBlogs();
+    const handleBlogPublished = (newBlog) => {
+      if (newBlog) {
+        setBlogs(prev => [newBlog, ...prev.filter(b => Number(b.id) !== Number(newBlog.id))]);
+        setCategoriesList(prev => prev.map(cat => {
+          if (cat.id === 'All' || (newBlog.category && cat.name.toLowerCase() === newBlog.category.toLowerCase())) {
+            return { ...cat, count: (cat.count || 0) + 1 };
+          }
+          return cat;
+        }));
+      } else {
+        loadBlogs();
+      }
     };
 
     const handleCommentAdded = (data) => {
@@ -168,6 +188,14 @@ export default function HomePage() {
   return (
     <div className="min-h-screen flex flex-col justify-between bg-[#FEF9C3]">
       <Header onOpenAuthModal={handleOpenAuthModal} onFocusSearch={scrollToSearch} />
+
+      {/* Floating Success Toast */}
+      {publishToast && (
+        <div className="fixed bottom-6 right-6 z-50 px-4 py-3 rounded-xl bg-white border border-slate-300 text-slate-900 text-xs font-semibold shadow-xl flex items-center gap-2.5 animate-in fade-in slide-in-from-bottom-2 duration-200">
+          <CheckCircle2 className="w-4 h-4 text-[#ff9432] shrink-0" />
+          <span>{publishToast}</span>
+        </div>
+      )}
 
       <main className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-10 flex-1 w-full space-y-14">
         

@@ -23,7 +23,7 @@ const server = http.createServer(app);
 // Socket.IO Setup
 const io = new Server(server, {
   cors: {
-    origin: process.env.FRONTEND_URL || 'http://localhost:3000',
+    origin: '*',
     methods: ['GET', 'POST', 'PUT', 'DELETE']
   }
 });
@@ -53,10 +53,16 @@ app.use((req, res, next) => {
 
 const PORT = process.env.PORT || 5000;
 
-// Security & Utility Middleware
-app.use(cors());
-app.use(express.json());
-app.use(express.urlencoded({ extended: true }));
+// Security & Utility Middleware with Production CORS Support
+app.use(cors({
+  origin: true,
+  credentials: true,
+  methods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS'],
+  allowedHeaders: ['Content-Type', 'Authorization']
+}));
+
+app.use(express.json({ limit: '50mb' }));
+app.use(express.urlencoded({ extended: true, limit: '50mb' }));
 app.use(requestLogger);
 
 // Static Uploads Serving

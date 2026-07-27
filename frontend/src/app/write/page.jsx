@@ -17,10 +17,7 @@ import {
   Loader2, 
   ArrowRight, 
   X, 
-  Tag,
-  PenTool,
-  Home,
-  BookOpen
+  Tag 
 } from 'lucide-react';
 
 const CATEGORIES = [
@@ -57,10 +54,7 @@ export default function CreateBlogPage() {
   const [isPreviewMode, setIsPreviewMode] = useState(false);
   const [loading, setLoading] = useState(false);
   const [errorMsg, setErrorMsg] = useState('');
-  
-  // Publish Success Modal state
-  const [publishedBlog, setPublishedBlog] = useState(null);
-  const [isSuccessModalOpen, setIsSuccessModalOpen] = useState(false);
+  const [successMsg, setSuccessMsg] = useState('');
 
   const handleOpenAuthModal = (mode = 'login') => {
     setAuthModalMode(mode);
@@ -102,21 +96,10 @@ export default function CreateBlogPage() {
     return true;
   };
 
-  const resetForm = () => {
-    setTitle('');
-    setCategory('Technology');
-    setCoverImageUrl('');
-    setDescription('');
-    setSelectedFile(null);
-    setPreviewImage('');
-    setIsPreviewMode(false);
-    setErrorMsg('');
-    setIsSuccessModalOpen(false);
-  };
-
   const handlePublish = async (e) => {
     if (e) e.preventDefault();
     setErrorMsg('');
+    setSuccessMsg('');
 
     if (!validateForm()) return;
 
@@ -134,12 +117,12 @@ export default function CreateBlogPage() {
     setLoading(false);
 
     if (res && (res.success || res.blog)) {
-      const blogObj = res.blog || {
-        id: Date.now(),
-        ...payload
-      };
-      setPublishedBlog(blogObj);
-      setIsSuccessModalOpen(true);
+      setSuccessMsg('🎉 Blog published successfully! Redirecting to Home...');
+      setTimeout(() => {
+        if (typeof window !== 'undefined') {
+          window.location.href = '/?published=true#blogs';
+        }
+      }, 500);
     } else {
       setErrorMsg(res.message || 'Failed to publish article. Please try again.');
     }
@@ -199,6 +182,13 @@ export default function CreateBlogPage() {
               <span>{errorMsg}</span>
             </div>
             <button onClick={() => setErrorMsg('')} className="text-slate-400 hover:text-slate-700"><X className="w-3.5 h-3.5" /></button>
+          </div>
+        )}
+
+        {successMsg && (
+          <div className="p-3 rounded-lg bg-emerald-50 border border-emerald-200 text-emerald-700 text-xs flex items-center gap-2 font-medium animate-in fade-in">
+            <CheckCircle2 className="w-4 h-4 text-emerald-600 shrink-0" />
+            <span>{successMsg}</span>
           </div>
         )}
 
@@ -326,55 +316,6 @@ export default function CreateBlogPage() {
         )}
 
       </main>
-
-      {/* Publish Success Modal */}
-      {isSuccessModalOpen && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-900/50 backdrop-blur-xs animate-in fade-in duration-150">
-          <div className="relative w-full max-w-md bg-white rounded-2xl p-6 sm:p-7 text-center space-y-5 shadow-xl border border-slate-200">
-            <div className="w-14 h-14 rounded-2xl bg-amber-50 border border-amber-300 text-[#ff9432] flex items-center justify-center mx-auto shadow-xs">
-              <CheckCircle2 className="w-8 h-8 text-[#ff9432]" />
-            </div>
-
-            <div className="space-y-1.5">
-              <h3 className="text-xl font-extrabold text-slate-900 tracking-tight">
-                Blog Published Successfully!
-              </h3>
-              <p className="text-xs text-slate-600 leading-relaxed max-w-sm mx-auto font-normal">
-                Your article is now live on BlogVerse and instantly visible to all readers.
-              </p>
-            </div>
-
-            <div className="pt-2 space-y-2.5">
-              {publishedBlog?.id && (
-                <a
-                  href={`/blogs/${publishedBlog.id}`}
-                  className="w-full py-2.5 rounded-lg text-xs font-semibold bg-[#ff9432] hover:bg-[#e88325] text-white flex items-center justify-center gap-2 shadow-xs transition-all"
-                >
-                  <BookOpen className="w-4 h-4" /> View Blog
-                </a>
-              )}
-
-              <div className="grid grid-cols-2 gap-2.5">
-                <button
-                  type="button"
-                  onClick={resetForm}
-                  className="py-2 px-3 rounded-lg text-xs font-semibold bg-white border border-slate-300 text-slate-700 hover:bg-slate-50 transition-colors flex items-center justify-center gap-1.5 shadow-2xs"
-                >
-                  <PenTool className="w-3.5 h-3.5 text-[#ff9432]" /> Write Another
-                </button>
-
-                <a
-                  href="/#blogs"
-                  className="py-2 px-3 rounded-lg text-xs font-semibold bg-slate-100 border border-slate-200 text-slate-700 hover:bg-slate-200 transition-colors flex items-center justify-center gap-1.5"
-                >
-                  <Home className="w-3.5 h-3.5 text-slate-500" /> Go to Home
-                </a>
-              </div>
-            </div>
-
-          </div>
-        </div>
-      )}
 
       <Modal isOpen={isAuthModalOpen} onClose={() => setIsAuthModalOpen(false)} initialMode={authModalMode} />
       <Footer />
