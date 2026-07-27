@@ -31,7 +31,7 @@ async function parseJsonResponse(res) {
 }
 
 // Fetch all blogs from the database API server for all users
-export async function fetchBlogsApi(category = null, page = 1, limit = 50) {
+export async function fetchBlogsApi(category = null, page = 1, limit = 100) {
   try {
     let url = `${API_BLOGS_URL}?page=${page}&limit=${limit}`;
     if (category) {
@@ -61,15 +61,28 @@ export async function fetchBlogsApi(category = null, page = 1, limit = 50) {
   }
 }
 
-// Fetch single blog by ID from the database API server
+// Fetch single blog by ID with fail-safe fallback lookup
 export async function fetchBlogByIdApi(id) {
   try {
     const res = await fetch(`${API_BLOGS_URL}/${id}`);
     const data = await parseJsonResponse(res);
-    return data;
-  } catch (err) {
-    return { success: false, message: err.message };
-  }
+    if (data && data.success && data.blog) {
+      return data;
+    }
+  } catch (err) {}
+
+  // Fail-safe lookup from all blogs
+  try {
+    const allRes = await fetchBlogsApi(null, 1, 100);
+    if (allRes && allRes.success && Array.isArray(allRes.data)) {
+      const match = allRes.data.find(b => String(b.id) === String(id));
+      if (match) {
+        return { success: true, blog: match };
+      }
+    }
+  } catch (err) {}
+
+  return { success: false, message: 'Article not found.' };
 }
 
 // Publish new blog to the backend API database
