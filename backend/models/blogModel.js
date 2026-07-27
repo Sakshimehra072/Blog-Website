@@ -1,10 +1,10 @@
 const { pool } = require('../config/database');
 
-// Pure Database & In-Memory Store (Zero sample/hardcoded blogs - Only real registered user blogs)
+// Pure Database & In-Memory Store for Real Registered User Blogs
 const inMemoryBlogs = [];
 const inMemoryLikes = []; // { user_id, blog_id }
 
-// 1. Create a new blog post for real registered user
+// 1. Create a new blog post for real registered user (ALWAYS INSERT new database row)
 async function createBlogInDb({ title, category, coverImage, description, authorId, authorName, authorAvatar, readTime }) {
   const cleanReadTime = readTime || '5 min read';
   const cleanCoverImage = coverImage || 'https://images.unsplash.com/photo-1499750310107-5fef28a66643?w=800&auto=format&fit=crop&q=80';
@@ -25,8 +25,8 @@ async function createBlogInDb({ title, category, coverImage, description, author
 
   try {
     const [result] = await pool.query(
-      `INSERT INTO blogs (title, category, cover_image, description, author_id, author_name, author_avatar, read_time)
-       VALUES (?, ?, ?, ?, ?, ?, ?, ?)`,
+      `INSERT INTO blogs (title, category, cover_image, description, author_id, author_name, author_avatar, read_time, created_at)
+       VALUES (?, ?, ?, ?, ?, ?, ?, ?, NOW())`,
       [
         newBlog.title,
         newBlog.category,
@@ -43,14 +43,18 @@ async function createBlogInDb({ title, category, coverImage, description, author
     newBlog.id = Date.now();
   }
 
-  inMemoryBlogs.unshift(newBlog);
+  // Retain in memory list as fallback to prevent any loss
+  if (!inMemoryBlogs.some(b => String(b.id) === String(newBlog.id))) {
+    inMemoryBlogs.unshift(newBlog);
+  }
+
   return formatBlogResponse(newBlog);
 }
 
-// 2. Fetch all blogs published by real users (With category filter, pagination page & limit)
-async function getBlogsFromDb({ category = null, page = 1, limit = 50 }) {
+// 2. Fetch ALL blogs published by real users (Sorted by createdAt DESC)
+async function getBlogsFromDb({ category = null, page = 1, limit = 100 }) {
   const pageNum = Math.max(1, parseInt(page) || 1);
-  const limitNum = Math.max(1, parseInt(limit) || 50);
+  const limitNum = Math.max(1, parseInt(limit) || 100);
   const offset = (pageNum - 1) * limitNum;
 
   try {
@@ -73,28 +77,28 @@ async function getBlogsFromDb({ category = null, page = 1, limit = 50 }) {
     query += ` ORDER BY b.created_at DESC LIMIT ${limitNum} OFFSET ${offset}`;
 
     const [rows] = await pool.query(query, params);
-    if (rows.length > 0) {
-      const dbBlogs = rows.map(formatBlogResponse);
-      inMemoryBlogs.forEach(m => {
-        if (!dbBlogs.some(b => String(b.id) === String(m.id))) {
-          if (!category || (m.category && m.category.toLowerCase() === category.trim().toLowerCase())) {
-            dbBlogs.push(formatBlogResponse(m));
-          }
-        }
-      });
-      dbBlogs.sort((a, b) => new Date(b.createdAt || b.created_at) - new Date(a.createdAt || a.created_at));
-      return dbBlogs;
-    }
-  } catch (err) {}
+    const dbBlogs = rows.map(formatBlogResponse);
 
-  // Memory fallback filter for real published blogs
-  let filtered = inMemoryBlogs;
-  if (category && category.trim()) {
-    filtered = filtered.filter(b => b.category && b.category.toLowerCase() === category.trim().toLowerCase());
+    // Merge in-memory fallback blogs to ensure zero post loss
+    inMemoryBlogs.forEach(m => {
+      if (!dbBlogs.some(b => String(b.id) === String(m.id))) {
+        if (!category || (m.category && m.category.toLowerCase() === category.trim().toLowerCase())) {
+          dbBlogs.push(formatBlogResponse(m));
+        }
+      }
+    });
+
+    dbBlogs.sort((a, b) => new Date(b.createdAt || b.created_at) - new Date(a.createdAt || a.created_at));
+    return dbBlogs;
+  } catch (err) {
+    let filtered = [...inMemoryBlogs];
+    if (category && category.trim()) {
+      filtered = filtered.filter(b => b.category && b.category.toLowerCase() === category.trim().toLowerCase());
+    }
+    filtered.sort((a, b) => new Date(b.created_at || b.createdAt) - new Date(a.created_at || a.createdAt));
+    const sliced = filtered.slice(offset, offset + limitNum);
+    return sliced.map(formatBlogResponse);
   }
-  filtered.sort((a, b) => new Date(b.created_at || b.createdAt) - new Date(a.created_at || a.createdAt));
-  const sliced = filtered.slice(offset, offset + limitNum);
-  return sliced.map(formatBlogResponse);
 }
 
 // 3. Fetch single blog by ID
