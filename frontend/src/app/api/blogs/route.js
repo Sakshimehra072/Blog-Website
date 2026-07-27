@@ -1,6 +1,6 @@
 import { NextResponse } from 'next/server';
 
-// Server-side persistent memory store for Next.js Vercel environment (Real User Blogs Only)
+// Server-side persistent storage for Next.js / Vercel runtime
 if (!globalThis._globalBlogsStore) {
   globalThis._globalBlogsStore = [];
 }
@@ -13,10 +13,10 @@ export async function GET(request) {
 
     let blogs = [...globalThis._globalBlogsStore];
 
-    // Attempt to fetch from external Express Node.js backend if deployed
+    // Attempt to fetch from external Express Node.js backend if reachable
     try {
       const controller = new AbortController();
-      const timeoutId = setTimeout(() => controller.abort(), 2000);
+      const timeoutId = setTimeout(() => controller.abort(), 1500);
       const res = await fetch(`${backendUrl}/api/blogs?${searchParams.toString()}`, {
         signal: controller.signal,
         cache: 'no-store'
@@ -42,9 +42,9 @@ export async function GET(request) {
     // Sort descending by date (newest first)
     blogs.sort((a, b) => new Date(b.createdAt || b.created_at || 0) - new Date(a.createdAt || a.created_at || 0));
 
-    // Calculate category counts
-    const categoryCounts = { All: globalThis._globalBlogsStore.length };
-    globalThis._globalBlogsStore.forEach(b => {
+    // Compute category counts
+    const categoryCounts = { All: blogs.length };
+    blogs.forEach(b => {
       if (b.category) {
         categoryCounts[b.category] = (categoryCounts[b.category] || 0) + 1;
       }
@@ -57,10 +57,12 @@ export async function GET(request) {
       count: blogs.length
     });
   } catch (err) {
+    const fallback = globalThis._globalBlogsStore || [];
     return NextResponse.json({
       success: true,
-      data: globalThis._globalBlogsStore || [],
-      categoryCounts: { All: (globalThis._globalBlogsStore || []).length }
+      data: fallback,
+      categoryCounts: { All: fallback.length },
+      count: fallback.length
     });
   }
 }
@@ -96,7 +98,7 @@ export async function POST(request) {
     const backendUrl = process.env.BACKEND_URL || 'http://localhost:5000';
     try {
       const controller = new AbortController();
-      const timeoutId = setTimeout(() => controller.abort(), 2000);
+      const timeoutId = setTimeout(() => controller.abort(), 1500);
       const res = await fetch(`${backendUrl}/api/blogs`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
@@ -112,7 +114,7 @@ export async function POST(request) {
       }
     } catch (err) {}
 
-    // Prepend to global serverless memory store
+    // Save to global serverless memory store
     if (!globalThis._globalBlogsStore.some(b => String(b.id) === String(newBlog.id))) {
       globalThis._globalBlogsStore.unshift(newBlog);
     }
