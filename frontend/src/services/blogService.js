@@ -1,13 +1,19 @@
-const rawUrl = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:5000/api';
-let cleanUrl = rawUrl.replace(/^\/+/, '').replace(/\/+$/, '');
-if (!cleanUrl.endsWith('/api')) {
-  cleanUrl = `${cleanUrl}/api`;
+function getBaseUrl() {
+  if (typeof window !== 'undefined') {
+    if (process.env.NEXT_PUBLIC_API_URL) {
+      let clean = process.env.NEXT_PUBLIC_API_URL.replace(/^\/+/, '').replace(/\/+$/, '');
+      if (!clean.endsWith('/api')) clean = `${clean}/api`;
+      return clean.startsWith('http') ? clean : `https://${clean}`;
+    }
+    return '/api';
+  }
+  return process.env.NEXT_PUBLIC_API_URL || 'http://localhost:5000/api';
 }
-const BASE_URL = cleanUrl.startsWith('http') ? cleanUrl : `https://${cleanUrl}`;
 
+const BASE_URL = getBaseUrl();
 const API_BLOGS_URL = `${BASE_URL}/blogs`;
 
-// Local blog persistence helpers for 100% fail-safe offline & deployment resilience
+// Local blog persistence helpers
 function getLocalBlogs() {
   if (typeof window === 'undefined') return [];
   try {

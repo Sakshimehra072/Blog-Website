@@ -1,10 +1,16 @@
-const rawUrl = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:5000/api';
-let cleanUrl = rawUrl.replace(/^\/+/, '').replace(/\/+$/, '');
-if (!cleanUrl.endsWith('/api')) {
-  cleanUrl = `${cleanUrl}/api`;
+function getBaseUrl() {
+  if (typeof window !== 'undefined') {
+    if (process.env.NEXT_PUBLIC_API_URL) {
+      let clean = process.env.NEXT_PUBLIC_API_URL.replace(/^\/+/, '').replace(/\/+$/, '');
+      if (!clean.endsWith('/api')) clean = `${clean}/api`;
+      return clean.startsWith('http') ? clean : `https://${clean}`;
+    }
+    return '/api';
+  }
+  return process.env.NEXT_PUBLIC_API_URL || 'http://localhost:5000/api';
 }
-const BASE_URL = cleanUrl.startsWith('http') ? cleanUrl : `https://${cleanUrl}`;
 
+const BASE_URL = getBaseUrl();
 const API_AUTH_URL = `${BASE_URL}/auth`;
 
 // Local user persistence helper for serverless/offline fallback
@@ -41,7 +47,7 @@ async function handleResponse(response) {
   if (contentType.includes('application/json')) {
     data = await response.json();
   } else {
-    throw new Error(`Server returned ${response.status} 404. Ensure your backend Node.js server (server.js) is running/deployed and NEXT_PUBLIC_API_URL points to your backend server.`);
+    throw new Error(`Server returned ${response.status} status.`);
   }
 
   if (!response.ok) {
