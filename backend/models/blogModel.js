@@ -5,10 +5,12 @@ const path = require('path');
 const DATA_DIR = path.join(__dirname, '../data');
 const FILE_PATH = path.join(DATA_DIR, 'blogs.json');
 
-// Ensure data directory and persistent file exist on backend
-if (!fs.existsSync(DATA_DIR)) {
-  try { fs.mkdirSync(DATA_DIR, { recursive: true }); } catch (e) {}
-}
+// Safely ensure data directory exists without breaking Vercel read-only filesystem
+try {
+  if (!fs.existsSync(DATA_DIR)) {
+    fs.mkdirSync(DATA_DIR, { recursive: true });
+  }
+} catch (e) {}
 
 function readPersistentBlogs() {
   try {
@@ -26,8 +28,7 @@ function writePersistentBlogs(blogs) {
   } catch (e) {}
 }
 
-// In-Memory Backup initialized from persistent file
-const persistentBlogs = readPersistentBlogs();
+const memoryBlogsFallback = [];
 const inMemoryLikes = [];
 
 // 1. Create a new blog post for real registered user (INSERT database row & save to persistent store)
@@ -69,11 +70,14 @@ async function createBlogInDb({ title, category, coverImage, description, author
     newBlog.id = Date.now();
   }
 
-  // Save to persistent file storage to guarantee zero post loss across server restarts
+  // Save to persistent file storage safely
   const currentList = readPersistentBlogs();
   if (!currentList.some(b => String(b.id) === String(newBlog.id))) {
     currentList.unshift(newBlog);
     writePersistentBlogs(currentList);
+  }
+  if (!memoryBlogsFallback.some(b => String(b.id) === String(newBlog.id))) {
+    memoryBlogsFallback.unshift(newBlog);
   }
 
   return formatBlogResponse(newBlog);
@@ -87,9 +91,12 @@ async function getBlogsFromDb({ category = null, page = 1, limit = 100 }) {
 
   let allBlogsMap = new Map();
 
-  // Load from persistent backend file first
+  // Load from persistent file & memory fallback
   const fileBlogs = readPersistentBlogs();
   fileBlogs.forEach(b => {
+    allBlogsMap.set(String(b.id), formatBlogResponse(b));
+  });
+  memoryBlogsFallback.forEach(b => {
     allBlogsMap.set(String(b.id), formatBlogResponse(b));
   });
 
@@ -151,7 +158,8 @@ async function getBlogByIdFromDb(blogId) {
   } catch (err) {}
 
   const fileBlogs = readPersistentBlogs();
-  const match = fileBlogs.find(b => Number(b.id) === bId || String(b.id) === String(blogId));
+  const match = fileBlogs.find(b => Number(b.id) === bId || String(b.id) === String(blogId)) ||
+                memoryBlogsFallback.find(b => Number(b.id) === bId || String(b.id) === String(blogId));
   if (match) return formatBlogResponse(match);
   return null;
 }
@@ -184,7 +192,7 @@ async function toggleLikeBlogInDb(userId, blogId) {
     return { liked, likesCount };
   } catch (err) {
     const fileBlogs = readPersistentBlogs();
-    const blog = fileBlogs.find(b => Number(b.id) === bId);
+    const blog = fileBlogs.find(b => Number(b.id) === bId) || memoryBlogsFallback.find(b => Number(b.id) === bId);
     let liked = false;
 
     const index = inMemoryLikes.findIndex(l => Number(l.user_id) === uId && Number(l.blog_id) === bId);
@@ -208,8 +216,9 @@ async function getCategoryCountsFromDb() {
   const countsMap = {};
 
   const fileBlogs = readPersistentBlogs();
-  countsMap['All'] = fileBlogs.length;
-  fileBlogs.forEach(b => {
+  const allList = [...fileBlogs, ...memoryBlogsFallback];
+  countsMap['All'] = allList.length;
+  allList.forEach(b => {
     if (b.category) {
       countsMap[b.category] = (countsMap[b.category] || 0) + 1;
     }
