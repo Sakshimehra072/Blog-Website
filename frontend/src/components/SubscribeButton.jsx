@@ -4,7 +4,7 @@ import React, { useState, useEffect } from 'react';
 import { Mail, Check, Loader2, UserPlus } from 'lucide-react';
 import { toggleSubscribeApi, fetchSubscriberCountApi } from '../services/subscriptionService';
 
-export default function SubscribeButton({ authorId = 'author_john_smith', compact = false, initialCount = 124 }) {
+export default function SubscribeButton({ authorId = 'author_john_smith', compact = false, initialCount = 0 }) {
   const [email, setEmail] = useState('');
   const [subscribed, setSubscribed] = useState(false);
   const [loading, setLoading] = useState(false);
@@ -14,7 +14,7 @@ export default function SubscribeButton({ authorId = 'author_john_smith', compac
     async function loadCount() {
       if (authorId) {
         const res = await fetchSubscriberCountApi(authorId);
-        if (res.success && res.subscriberCount > 0) {
+        if (res && res.success && typeof res.subscriberCount === 'number') {
           setCount(res.subscriberCount);
         }
       }
@@ -29,16 +29,16 @@ export default function SubscribeButton({ authorId = 'author_john_smith', compac
     const res = await toggleSubscribeApi(authorId);
     setLoading(false);
 
-    if (res.success) {
+    if (res && res.success) {
       setSubscribed(res.isSubscribed);
       if (typeof res.subscriberCount === 'number') {
         setCount(res.subscriberCount);
       } else {
-        setCount(prev => (res.isSubscribed ? prev + 1 : prev - 1));
+        setCount(prev => (res.isSubscribed ? prev + 1 : Math.max(0, prev - 1)));
       }
     } else {
       setSubscribed(prev => !prev);
-      setCount(prev => (subscribed ? prev - 1 : prev + 1));
+      setCount(prev => (subscribed ? Math.max(0, prev - 1) : prev + 1));
     }
   };
 
@@ -57,11 +57,11 @@ export default function SubscribeButton({ authorId = 'author_john_smith', compac
           <Loader2 className="w-3.5 h-3.5 animate-spin" />
         ) : subscribed ? (
           <>
-            <Check className="w-3.5 h-3.5 text-emerald-600" /> Subscribed ({count})
+            <Check className="w-3.5 h-3.5 text-emerald-600" /> Subscribed {count > 0 ? `(${count})` : ''}
           </>
         ) : (
           <>
-            <UserPlus className="w-3.5 h-3.5" /> Follow ({count})
+            <UserPlus className="w-3.5 h-3.5" /> Follow {count > 0 ? `(${count})` : ''}
           </>
         )}
       </button>
@@ -94,7 +94,7 @@ export default function SubscribeButton({ authorId = 'author_john_smith', compac
           <Loader2 className="w-3.5 h-3.5 animate-spin" />
         ) : subscribed ? (
           <>
-            <Check className="w-3.5 h-3.5 text-emerald-600" /> Subscribed ({count})
+            <Check className="w-3.5 h-3.5 text-emerald-600" /> Subscribed
           </>
         ) : (
           'Subscribe'
