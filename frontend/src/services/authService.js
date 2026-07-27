@@ -1,5 +1,8 @@
-const rawUrl = process.env.NEXT_PUBLIC_API_URL || 'https://blog-website-rccc.vercel.app/api';
-const cleanUrl = rawUrl.replace(/^\/+/, '').replace(/\/+$/, '');
+const rawUrl = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:5000/api';
+let cleanUrl = rawUrl.replace(/^\/+/, '').replace(/\/+$/, '');
+if (!cleanUrl.endsWith('/api')) {
+  cleanUrl = `${cleanUrl}/api`;
+}
 const BASE_URL = cleanUrl.startsWith('http') ? cleanUrl : `https://${cleanUrl}`;
 
 const API_AUTH_URL = `${BASE_URL}/auth`;
@@ -10,7 +13,7 @@ async function handleResponse(response) {
   if (contentType.includes('application/json')) {
     data = await response.json();
   } else {
-    throw new Error(`Server endpoint returned ${response.status}. Please check backend API server deployment.`);
+    throw new Error(`Server returned ${response.status} 404. Ensure your backend Node.js server (server.js) is running/deployed and NEXT_PUBLIC_API_URL points to your backend server.`);
   }
 
   if (!response.ok) {

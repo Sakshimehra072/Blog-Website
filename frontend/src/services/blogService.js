@@ -1,5 +1,8 @@
-const rawUrl = process.env.NEXT_PUBLIC_API_URL || 'https://blog-website-rccc.vercel.app/api';
-const cleanUrl = rawUrl.replace(/^\/+/, '').replace(/\/+$/, '');
+const rawUrl = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:5000/api';
+let cleanUrl = rawUrl.replace(/^\/+/, '').replace(/\/+$/, '');
+if (!cleanUrl.endsWith('/api')) {
+  cleanUrl = `${cleanUrl}/api`;
+}
 const BASE_URL = cleanUrl.startsWith('http') ? cleanUrl : `https://${cleanUrl}`;
 
 const API_BLOGS_URL = `${BASE_URL}/blogs`;
