@@ -39,19 +39,14 @@ export function AuthProvider({ children }) {
             setUser(JSON.parse(storedUser));
           } catch (e) {}
         }
-        // Verify token with backend safely without logging out on temporary network/500/404 errors
+        // Safely verify profile with backend without invalidating stored user session
         try {
           const res = await getMeApi(storedToken);
           if (res && res.success && res.user) {
             setUser(res.user);
             localStorage.setItem('blogverse_user', JSON.stringify(res.user));
           }
-        } catch (err) {
-          // Only logout if token is explicitly expired or invalid (401/403)
-          if (err.message && (err.message.includes('401') || err.message.includes('403') || err.message.includes('expired') || err.message.includes('Invalid token'))) {
-            logout();
-          }
-        }
+        } catch (err) {}
       }
       setLoading(false);
     }
