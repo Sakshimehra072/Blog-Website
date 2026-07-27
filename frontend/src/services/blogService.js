@@ -13,31 +13,6 @@ function getBaseUrl() {
 const BASE_URL = getBaseUrl();
 const API_BLOGS_URL = `${BASE_URL}/blogs`;
 
-// Local blog persistence helpers
-function getLocalBlogs() {
-  if (typeof window === 'undefined') return [];
-  try {
-    const raw = localStorage.getItem('blogverse_local_blogs');
-    return raw ? JSON.parse(raw) : [];
-  } catch (err) {
-    return [];
-  }
-}
-
-function saveLocalBlog(blog) {
-  if (typeof window === 'undefined' || !blog) return;
-  try {
-    const blogs = getLocalBlogs();
-    const existingIndex = blogs.findIndex(b => String(b.id) === String(blog.id));
-    if (existingIndex !== -1) {
-      blogs[existingIndex] = blog;
-    } else {
-      blogs.unshift(blog);
-    }
-    localStorage.setItem('blogverse_local_blogs', JSON.stringify(blogs));
-  } catch (err) {}
-}
-
 function getAuthHeaders() {
   const token = typeof window !== 'undefined' ? localStorage.getItem('blogverse_token') : null;
   const headers = { 'Content-Type': 'application/json' };
@@ -55,10 +30,8 @@ async function parseJsonResponse(res) {
   return { success: false, message: `Server error (${res.status})` };
 }
 
-export async function fetchBlogsApi(category = null, page = 1, limit = 20) {
-  let apiBlogs = [];
-  let categoryCounts = null;
-
+// Fetch all blogs from the database API server for all users
+export async function fetchBlogsApi(category = null, page = 1, limit = 50) {
   try {
     let url = `${API_BLOGS_URL}?page=${page}&limit=${limit}`;
     if (category) {
@@ -66,59 +39,41 @@ export async function fetchBlogsApi(category = null, page = 1, limit = 20) {
     }
     const res = await fetch(url);
     const data = await parseJsonResponse(res);
+
     if (data && data.success && Array.isArray(data.data)) {
-      apiBlogs = data.data;
-      categoryCounts = data.categoryCounts || null;
-    } else if (Array.isArray(data)) {
-      apiBlogs = data;
+      return {
+        success: true,
+        data: data.data,
+        categoryCounts: data.categoryCounts || null
+      };
     }
-  } catch (err) {}
-
-  // Merge with local fallback persistence for zero data loss
-  const localBlogs = getLocalBlogs();
-  let merged = [...apiBlogs];
-
-  localBlogs.forEach(lBlog => {
-    if (!merged.some(b => String(b.id) === String(lBlog.id))) {
-      if (!category || (lBlog.category && lBlog.category.toLowerCase() === category.toLowerCase())) {
-        merged.unshift(lBlog);
-      }
+    if (Array.isArray(data)) {
+      return {
+        success: true,
+        data: data,
+        categoryCounts: null
+      };
     }
-  });
-
-  // Sort descending by date
-  merged.sort((a, b) => new Date(b.createdAt || b.created_at) - new Date(a.createdAt || a.created_at));
-
-  return {
-    success: true,
-    data: merged,
-    categoryCounts
-  };
+    return { success: false, data: [], categoryCounts: null };
+  } catch (err) {
+    console.error('Fetch Blogs Error:', err);
+    return { success: false, data: [], categoryCounts: null };
+  }
 }
 
+// Fetch single blog by ID from the database API server
 export async function fetchBlogByIdApi(id) {
   try {
     const res = await fetch(`${API_BLOGS_URL}/${id}`);
     const data = await parseJsonResponse(res);
-    if (data && data.success && data.blog) {
-      saveLocalBlog(data.blog);
-      return data;
-    }
-  } catch (err) {}
-
-  // Fallback to local blog
-  const localBlogs = getLocalBlogs();
-  const match = localBlogs.find(b => String(b.id) === String(id));
-  if (match) {
-    return { success: true, blog: match };
+    return data;
+  } catch (err) {
+    return { success: false, message: err.message };
   }
-
-  return { success: false, message: 'Article not found.' };
 }
 
+// Publish new blog to the backend API database
 export async function createBlogApi(blogData) {
-  let createdBlog = null;
-
   try {
     const res = await fetch(`${API_BLOGS_URL}`, {
       method: 'POST',
@@ -126,40 +81,14 @@ export async function createBlogApi(blogData) {
       body: JSON.stringify(blogData)
     });
     const data = await parseJsonResponse(res);
-    if (data && (data.success || data.blog)) {
-      createdBlog = data.blog;
-      saveLocalBlog(createdBlog);
-      return data;
-    }
-  } catch (err) {}
-
-  // Local creation fallback
-  const fallbackBlog = {
-    id: Date.now(),
-    title: blogData.title,
-    category: blogData.category,
-    coverImage: blogData.coverImage,
-    description: blogData.description,
-    excerpt: blogData.description ? (blogData.description.slice(0, 140) + '...') : '',
-    author: {
-      id: 1,
-      name: blogData.authorName || 'Registered Author',
-      avatar: blogData.authorAvatar || null
-    },
-    readTime: '5 min read',
-    likes: 0,
-    comments: 0,
-    createdAt: new Date().toISOString()
-  };
-
-  saveLocalBlog(fallbackBlog);
-  return {
-    success: true,
-    message: 'Article published successfully!',
-    blog: fallbackBlog
-  };
+    return data;
+  } catch (err) {
+    console.error('Create Blog Error:', err);
+    return { success: false, message: err.message || 'Failed to publish blog.' };
+  }
 }
 
+// Toggle Like on blog in the backend database
 export async function likeBlogApi(id) {
   try {
     const res = await fetch(`${API_BLOGS_URL}/${id}/like`, {
@@ -172,6 +101,7 @@ export async function likeBlogApi(id) {
   }
 }
 
+// Upload blog cover image
 export async function uploadBlogImageApi(file) {
   try {
     const formData = new FormData();
