@@ -1,7 +1,7 @@
 'use client';
 
 import React from 'react';
-import { Sparkles, Twitter, Github, Linkedin } from 'lucide-react';
+import { Sparkles, Github, Linkedin } from 'lucide-react';
 
 export default function Footer() {
   return (
@@ -26,13 +26,22 @@ export default function Footer() {
 
           {/* Social Links */}
           <div className="flex items-center gap-2">
-            <a href="#" aria-label="Twitter" className="w-8 h-8 rounded-lg bg-slate-100 border border-slate-300 flex items-center justify-center text-slate-600 hover:text-[#ff9432] hover:border-[#ff9432] transition-colors">
-              <Twitter className="w-4 h-4" />
-            </a>
-            <a href="#" aria-label="GitHub" className="w-8 h-8 rounded-lg bg-slate-100 border border-slate-300 flex items-center justify-center text-slate-600 hover:text-[#ff9432] hover:border-[#ff9432] transition-colors">
+            <a 
+              href="https://github.com/Sakshimehra072" 
+              target="_blank" 
+              rel="noopener noreferrer" 
+              aria-label="GitHub Profile" 
+              className="w-8 h-8 rounded-lg bg-slate-100 border border-slate-300 flex items-center justify-center text-slate-600 hover:text-[#ff9432] hover:border-[#ff9432] transition-colors"
+            >
               <Github className="w-4 h-4" />
             </a>
-            <a href="#" aria-label="LinkedIn" className="w-8 h-8 rounded-lg bg-slate-100 border border-slate-300 flex items-center justify-center text-slate-600 hover:text-[#ff9432] hover:border-[#ff9432] transition-colors">
+            <a 
+              href="https://www.linkedin.com/in/sakshi-mehra-b91ab024b" 
+              target="_blank" 
+              rel="noopener noreferrer" 
+              aria-label="LinkedIn Profile" 
+              className="w-8 h-8 rounded-lg bg-slate-100 border border-slate-300 flex items-center justify-center text-slate-600 hover:text-[#ff9432] hover:border-[#ff9432] transition-colors"
+            >
               <Linkedin className="w-4 h-4" />
             </a>
           </div>
@@ -42,7 +51,6 @@ export default function Footer() {
         {/* Copyright */}
         <div className="mt-8 pt-6 border-t border-slate-200 flex flex-col sm:flex-row justify-between items-center text-xs text-slate-500 gap-4">
           <p>© {new Date().getFullYear()} BlogVerse. All rights reserved.</p>
-
         </div>
       </div>
     </footer>
