@@ -3,6 +3,19 @@
 import React, { useState, useEffect } from 'react';
 import { MessageSquare } from 'lucide-react';
 import { getSocket } from '../services/socketService';
+import { fetchCommentsApi } from '../services/commentService';
+
+function countAllComments(list) {
+  if (!Array.isArray(list)) return 0;
+  let total = 0;
+  list.forEach(item => {
+    total += 1;
+    if (Array.isArray(item.replies) && item.replies.length > 0) {
+      total += countAllComments(item.replies);
+    }
+  });
+  return total;
+}
 
 export default function CommentButton({ blogId, count = 0, onClick }) {
   const [commentCount, setCommentCount] = useState(count);
@@ -11,6 +24,26 @@ export default function CommentButton({ blogId, count = 0, onClick }) {
     setCommentCount(count);
   }, [count]);
 
+  // Fetch real database comments count
+  useEffect(() => {
+    if (!blogId) return;
+    let isMounted = true;
+
+    async function loadRealCount() {
+      const res = await fetchCommentsApi(blogId);
+      if (res && res.success && Array.isArray(res.comments)) {
+        const total = countAllComments(res.comments);
+        if (isMounted) {
+          setCommentCount(total);
+        }
+      }
+    }
+
+    loadRealCount();
+    return () => { isMounted = false; };
+  }, [blogId]);
+
+  // Real-Time Socket Listener for Live Comment Updates
   useEffect(() => {
     if (!blogId) return;
     const socket = getSocket();

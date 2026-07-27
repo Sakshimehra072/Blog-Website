@@ -20,8 +20,14 @@ export default function BlogCard({ blog }) {
   const firstLetter = authorName.trim().charAt(0).toUpperCase() || 'A';
 
   const readTime = blog.readTime || blog.read_time || '5 min read';
-  const likesCount = typeof blog.likes === 'number' ? blog.likes : (blog.likes_count || 0);
-  const commentsCount = typeof blog.comments === 'number' ? blog.comments : (blog.comments_count || 0);
+
+  const likesCount = Array.isArray(blog.likes)
+    ? blog.likes.length
+    : (typeof blog.likes === 'number' ? blog.likes : (blog.likes_count || 0));
+
+  const commentsCount = Array.isArray(blog.comments)
+    ? blog.comments.length
+    : (typeof blog.comments === 'number' ? blog.comments : (blog.comments_count || 0));
   
   const formattedDate = blog.createdAt || blog.created_at 
     ? new Date(blog.createdAt || blog.created_at).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' })
@@ -32,6 +38,13 @@ export default function BlogCard({ blog }) {
   const handleCardClick = () => {
     if (typeof window !== 'undefined') {
       window.location.href = blogUrl;
+    }
+  };
+
+  const handleCommentClick = (e) => {
+    if (e) e.stopPropagation();
+    if (typeof window !== 'undefined') {
+      window.location.href = `${blogUrl}#discussion`;
     }
   };
 
@@ -100,7 +113,7 @@ export default function BlogCard({ blog }) {
       >
         <div className="flex items-center gap-2">
           <LikeButton blogId={blogId} initialLikes={likesCount} />
-          <CommentButton blogId={blogId} count={commentsCount} />
+          <CommentButton blogId={blogId} count={commentsCount} onClick={handleCommentClick} />
         </div>
         <div className="flex items-center gap-1.5">
           <FavouriteButton blogId={blogId} />

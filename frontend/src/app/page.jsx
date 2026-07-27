@@ -31,7 +31,9 @@ import {
   Gamepad2, 
   Atom, 
   Camera,
-  BookOpen
+  BookOpen,
+  SearchX,
+  Home
 } from 'lucide-react';
 
 const BASE_CATEGORIES = [
@@ -62,6 +64,15 @@ export default function HomePage() {
   const [page, setPage] = useState(1);
   const [blogs, setBlogs] = useState([]);
   const [loading, setLoading] = useState(true);
+  const [searchQuery, setSearchQuery] = useState('');
+
+  useEffect(() => {
+    if (typeof window !== 'undefined') {
+      const params = new URLSearchParams(window.location.search);
+      const q = params.get('search') || params.get('q') || '';
+      setSearchQuery(q);
+    }
+  }, []);
 
   const handleOpenAuthModal = (mode = 'login') => {
     setAuthModalMode(mode);
@@ -71,7 +82,7 @@ export default function HomePage() {
   const loadBlogs = async () => {
     setLoading(true);
     const queryCategory = (activeCategory === 'All' || !activeCategory) ? null : activeCategory;
-    const res = await fetchBlogsApi(queryCategory, page, 20);
+    const res = await fetchBlogsApi(queryCategory, page, 50);
     if (res && res.success && Array.isArray(res.data)) {
       setBlogs(res.data);
       if (res.categoryCounts) {
@@ -92,18 +103,49 @@ export default function HomePage() {
     loadBlogs();
   }, [activeCategory, page]);
 
-  // Real-Time Socket Listener for Instant Post & Like Updates
+  // Real-Time Socket Listener for Instant Post, Comment & Like Updates
   useEffect(() => {
     const socket = getSocket();
 
-    const handleBlogPublished = (newBlog) => {
+    const handleBlogPublished = () => {
       loadBlogs();
     };
 
+    const handleCommentAdded = (data) => {
+      setBlogs(prev => prev.map(blog => {
+        if (String(blog.id) === String(data.blogId)) {
+          const prevCount = typeof blog.comments === 'number' ? blog.comments : 0;
+          return {
+            ...blog,
+            comments: prevCount + 1,
+            comments_count: prevCount + 1
+          };
+        }
+        return blog;
+      }));
+    };
+
+    const handleBlogLiked = (data) => {
+      setBlogs(prev => prev.map(blog => {
+        if (Number(blog.id) === Number(data.blogId)) {
+          return {
+            ...blog,
+            likes: data.likesCount,
+            likes_count: data.likesCount
+          };
+        }
+        return blog;
+      }));
+    };
+
     socket.on('blog:published', handleBlogPublished);
+    socket.on('comment:added', handleCommentAdded);
+    socket.on('blog:liked', handleBlogLiked);
 
     return () => {
       socket.off('blog:published', handleBlogPublished);
+      socket.off('comment:added', handleCommentAdded);
+      socket.off('blog:liked', handleBlogLiked);
     };
   }, [activeCategory]);
 
@@ -111,6 +153,17 @@ export default function HomePage() {
     const blogsEl = document.getElementById('blogs');
     if (blogsEl) blogsEl.scrollIntoView({ behavior: 'smooth' });
   };
+
+  // Search Filter Matching Logic
+  const filteredBlogs = blogs.filter(b => {
+    if (!searchQuery || !searchQuery.trim()) return true;
+    const q = searchQuery.toLowerCase().trim();
+    const titleMatch = b.title && b.title.toLowerCase().includes(q);
+    const descMatch = (b.description || b.excerpt) && (b.description || b.excerpt).toLowerCase().includes(q);
+    const catMatch = b.category && b.category.toLowerCase().includes(q);
+    const authorMatch = b.author?.name && b.author.name.toLowerCase().includes(q);
+    return titleMatch || descMatch || catMatch || authorMatch;
+  });
 
   return (
     <div className="min-h-screen flex flex-col justify-between bg-[#FEF9C3]">
@@ -161,60 +214,76 @@ export default function HomePage() {
           }}
         />
 
-        {/* Recent Uploads Section */}
+        {/* Recent Uploads & Search Results Section */}
         <section id="blogs" className="space-y-6">
-          <div className="flex items-center justify-between">
+          <div className="flex items-center justify-between flex-wrap gap-3">
             <h2 className="text-xl font-bold text-slate-900 tracking-tight flex items-center gap-2">
               <TrendingUp className="w-5 h-5 text-[#ff9432]" />
-              {activeCategory === 'All' ? 'Recent Uploads' : `${activeCategory} Articles`}
+              {searchQuery ? `Search Results for "${searchQuery}"` : (activeCategory === 'All' ? 'Recent Uploads' : `${activeCategory} Articles`)}
             </h2>
-            {activeCategory && activeCategory !== 'All' && (
-              <button
-                onClick={() => {
-                  setActiveCategory('All');
-                  setPage(1);
-                }}
-                className="text-xs font-semibold px-3 py-1.5 rounded-lg bg-amber-50 text-amber-900 border border-amber-200 hover:bg-amber-100 transition-colors"
-              >
-                Filtered: {activeCategory} × (Show All)
-              </button>
-            )}
+
+            <div className="flex items-center gap-2">
+              {searchQuery && (
+                <a
+                  href="/"
+                  className="text-xs font-semibold px-3 py-1.5 rounded-lg bg-amber-50 text-amber-900 border border-amber-300 hover:bg-amber-100 transition-colors flex items-center gap-1"
+                >
+                  Clear Search: "{searchQuery}" ×
+                </a>
+              )}
+
+              {activeCategory && activeCategory !== 'All' && !searchQuery && (
+                <button
+                  onClick={() => {
+                    setActiveCategory('All');
+                    setPage(1);
+                  }}
+                  className="text-xs font-semibold px-3 py-1.5 rounded-lg bg-amber-50 text-amber-900 border border-amber-300 hover:bg-amber-100 transition-colors"
+                >
+                  Filtered: {activeCategory} × (Show All)
+                </button>
+              )}
+            </div>
           </div>
 
           {loading ? (
             <div className="p-12 text-center text-xs text-slate-500 font-medium">
               Loading recent articles...
             </div>
-          ) : blogs.length > 0 ? (
+          ) : filteredBlogs.length > 0 ? (
             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-              {blogs.map((post) => (
+              {filteredBlogs.map((post) => (
                 <BlogCard key={post.id} blog={post} />
               ))}
             </div>
           ) : (
-            <div className="bg-white rounded-2xl p-12 text-center border border-slate-200 max-w-md mx-auto my-6 space-y-4 shadow-xs">
-              <div className="w-12 h-12 rounded-xl bg-amber-50 border border-amber-200 flex items-center justify-center text-[#ff9432] mx-auto">
-                <BookOpen className="w-6 h-6 text-[#ff9432]" />
+            <div className="bg-white rounded-2xl p-10 sm:p-12 text-center border border-slate-300 max-w-md mx-auto my-8 space-y-4 shadow-sm">
+              <div className="w-12 h-12 rounded-xl bg-amber-50 border border-amber-300 flex items-center justify-center text-[#ff9432] mx-auto shadow-xs">
+                <SearchX className="w-6 h-6 text-[#ff9432]" />
               </div>
+
               <div className="space-y-1">
-                <h3 className="text-base font-bold text-slate-900 tracking-tight">No articles published yet</h3>
-                <p className="text-xs text-slate-500">
-                  {activeCategory !== 'All' ? `No stories found in ${activeCategory}.` : 'Be the first registered author to write and publish an essay!'}
+                <h3 className="text-lg font-bold text-slate-900 tracking-tight">Content not available</h3>
+                <p className="text-xs text-slate-500 leading-relaxed font-normal">
+                  {searchQuery 
+                    ? `No articles found matching "${searchQuery}". Please try searching with another keyword or explore all articles.` 
+                    : (activeCategory !== 'All' ? `No stories found in ${activeCategory}.` : 'Be the first registered author to write and publish an essay!')}
                 </p>
               </div>
-              <div className="pt-2">
+
+              <div className="pt-2 flex justify-center">
                 <a
-                  href="/write"
+                  href="/"
                   className="inline-flex items-center gap-1.5 px-4 py-2 rounded-lg text-xs font-semibold bg-[#ff9432] hover:bg-[#e88325] text-white shadow-xs transition-all"
                 >
-                  <PenTool className="w-3.5 h-3.5" /> Create First Post
+                  <Home className="w-3.5 h-3.5" /> Go to Home
                 </a>
               </div>
             </div>
           )}
 
-          {blogs.length >= 20 && (
-            <Pagination currentPage={page} totalPages={Math.ceil(blogs.length / 20) + 1} onPageChange={(p) => setPage(p)} />
+          {filteredBlogs.length >= 20 && (
+            <Pagination currentPage={page} totalPages={Math.ceil(filteredBlogs.length / 20) + 1} onPageChange={(p) => setPage(p)} />
           )}
         </section>
 
