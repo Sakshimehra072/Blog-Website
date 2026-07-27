@@ -7,6 +7,7 @@ import BlogCard from '../../components/BlogCard';
 import Modal from '../../components/Modal';
 import { useAuth } from '../../context/AuthContext';
 import { fetchBlogsApi } from '../../services/blogService';
+import { getSocket } from '../../services/socketService';
 import { BookOpen, PenTool, FolderEdit, Loader2 } from 'lucide-react';
 
 export default function MyBlogsPage() {
@@ -21,24 +22,43 @@ export default function MyBlogsPage() {
     setIsAuthModalOpen(true);
   };
 
-  useEffect(() => {
-    async function loadMyBlogs() {
-      setLoading(true);
-      const res = await fetchBlogsApi(null, 1, 100);
-      if (res && res.success && Array.isArray(res.data)) {
-        const userArticles = res.data.filter(b => 
-          (user && b.author && String(b.author.id) === String(user.id)) ||
-          (user && b.author && b.author.name === (user.name || user.username))
-        );
-        // Sort latest first
-        userArticles.sort((a, b) => new Date(b.createdAt || b.created_at) - new Date(a.createdAt || a.created_at));
-        setMyBlogs(userArticles);
-      } else {
-        setMyBlogs([]);
-      }
-      setLoading(false);
+  const loadMyBlogs = async () => {
+    setLoading(true);
+    const res = await fetchBlogsApi(null, 1, 100);
+    if (res && res.success && Array.isArray(res.data)) {
+      const userArticles = res.data.filter(b => 
+        (user && b.author && String(b.author.id) === String(user.id)) ||
+        (user && b.author && b.author.name === (user.name || user.username))
+      );
+      // Sort latest first
+      userArticles.sort((a, b) => new Date(b.createdAt || b.created_at) - new Date(a.createdAt || a.created_at));
+      setMyBlogs(userArticles);
+    } else {
+      setMyBlogs([]);
     }
+    setLoading(false);
+  };
+
+  useEffect(() => {
     loadMyBlogs();
+  }, [user]);
+
+  // Real-Time Socket Listener for Instant My-Blogs Updates
+  useEffect(() => {
+    const socket = getSocket();
+
+    const handleBlogPublished = (newBlog) => {
+      if (newBlog && user && ((newBlog.author && String(newBlog.author.id) === String(user.id)) || (newBlog.author && newBlog.author.name === (user.name || user.username)))) {
+        setMyBlogs(prev => [newBlog, ...prev.filter(b => b.id !== newBlog.id)]);
+      } else {
+        loadMyBlogs();
+      }
+    };
+
+    socket.on('blog:published', handleBlogPublished);
+    return () => {
+      socket.off('blog:published', handleBlogPublished);
+    };
   }, [user]);
 
   return (
@@ -48,9 +68,9 @@ export default function MyBlogsPage() {
       <main className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-10 flex-1 w-full space-y-8">
         
         {/* Banner */}
-        <section className="relative overflow-hidden rounded-2xl p-6 sm:p-10 bg-white border border-slate-200/90 shadow-xs">
+        <section className="relative overflow-hidden rounded-2xl p-6 sm:p-10 bg-white border border-slate-300 shadow-xs">
           <div className="space-y-2">
-            <div className="inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-md bg-amber-50 text-amber-900 text-xs font-semibold border border-amber-200">
+            <div className="inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-md bg-amber-50 text-amber-900 text-xs font-semibold border border-amber-300">
               <FolderEdit className="w-3.5 h-3.5 text-[#ff9432]" /> Personal Portfolio
             </div>
             
@@ -58,7 +78,7 @@ export default function MyBlogsPage() {
               My Published <span className="text-[#ff9432]">Articles</span>
             </h1>
 
-            <p className="text-slate-600 text-xs sm:text-sm max-w-xl">
+            <p className="text-slate-600 text-xs sm:text-sm max-w-xl font-normal">
               All stories, technical guides, and engineering essays published by you, ordered from newest to oldest.
             </p>
           </div>
@@ -67,7 +87,7 @@ export default function MyBlogsPage() {
         {/* Content Section */}
         <section className="space-y-6">
           {loading ? (
-            <div className="flex items-center justify-center p-12 text-slate-500 text-xs gap-2">
+            <div className="flex items-center justify-center p-12 text-slate-500 text-xs font-medium gap-2">
               <Loader2 className="w-4 h-4 animate-spin text-[#ff9432]" />
               <span>Loading your published articles...</span>
             </div>
@@ -78,14 +98,14 @@ export default function MyBlogsPage() {
               ))}
             </div>
           ) : (
-            <div className="bg-white rounded-xl p-10 text-center space-y-4 border border-slate-200 max-w-lg mx-auto my-8 shadow-xs">
-              <div className="w-12 h-12 rounded-xl bg-amber-50 border border-amber-200 flex items-center justify-center text-[#ff9432] mx-auto">
+            <div className="bg-white rounded-2xl p-10 text-center space-y-4 border border-slate-300 max-w-lg mx-auto my-8 shadow-xs">
+              <div className="w-12 h-12 rounded-xl bg-amber-50 border border-amber-300 flex items-center justify-center text-[#ff9432] mx-auto shadow-xs">
                 <FolderEdit className="w-6 h-6 text-[#ff9432]" />
               </div>
               
               <div className="space-y-1">
                 <h3 className="text-lg font-bold text-slate-900 tracking-tight">No published articles yet.</h3>
-                <p className="text-xs text-slate-500">You haven't written any blog posts yet. Share your first article today!</p>
+                <p className="text-xs text-slate-500 font-normal">You haven't written any blog posts yet. Share your first article today!</p>
               </div>
 
               <div className="pt-2">
