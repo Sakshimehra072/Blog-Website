@@ -7,7 +7,7 @@ function getBaseUrl() {
     }
     return '/api';
   }
-  return process.env.NEXT_PUBLIC_API_URL || 'http://localhost:5000/api';
+  return process.env.NEXT_PUBLIC_API_URL || 'https://blog-website-rccc.vercel.app/api';
 }
 
 const BASE_URL = getBaseUrl();

@@ -1,7 +1,7 @@
 import { NextResponse } from 'next/server';
 
 function getBackendUrl() {
-  const envUrl = process.env.BACKEND_URL || process.env.NEXT_PUBLIC_API_URL || 'http://localhost:5000';
+  const envUrl = process.env.BACKEND_URL || process.env.NEXT_PUBLIC_API_URL || 'https://blog-website-rccc.vercel.app';
   let clean = envUrl.replace(/\/+$/, '');
   if (clean.endsWith('/api')) {
     clean = clean.replace(/\/api$/, '');

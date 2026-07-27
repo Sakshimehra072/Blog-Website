@@ -7,7 +7,7 @@ function getBaseUrl() {
     }
     return '/api';
   }
-  return process.env.NEXT_PUBLIC_API_URL || 'http://localhost:5000/api';
+  return process.env.NEXT_PUBLIC_API_URL || 'https://blog-website-rccc.vercel.app/api';
 }
 
 const BASE_URL = getBaseUrl();
@@ -69,7 +69,7 @@ export async function fetchBlogByIdApi(id) {
     if (data && data.success && data.blog) {
       return data;
     }
-  } catch (err) {}
+  } catch (err) { }
 
   // Fail-safe lookup from all blogs
   try {
@@ -80,7 +80,7 @@ export async function fetchBlogByIdApi(id) {
         return { success: true, blog: match };
       }
     }
-  } catch (err) {}
+  } catch (err) { }
 
   return { success: false, message: 'Article not found.' };
 }
