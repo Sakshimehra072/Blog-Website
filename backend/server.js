@@ -78,14 +78,18 @@ app.use('/api/favourites', favouriteRoutes);
 
 // Root route
 app.get('/', (req, res) => {
-  res.json({ message: 'BlogVerse Real-Time Backend API Server is Running' });
+  res.json({ success: true, message: 'BlogVerse Real-Time Backend API Server is Running' });
 });
 
 // Centralized Error Handling
 app.use(errorHandler);
 
-// Start HTTP & Socket.IO Server
-server.listen(PORT, async () => {
-  console.log(`🚀 BlogVerse Real-Time Express Server listening on http://localhost:${PORT}`);
-  await testConnection();
-});
+// Start HTTP & Socket.IO Server if not running in serverless environment
+if (process.env.NODE_ENV !== 'production' || !process.env.VERCEL) {
+  server.listen(PORT, async () => {
+    console.log(`🚀 BlogVerse Real-Time Express Server listening on http://localhost:${PORT}`);
+    await testConnection();
+  });
+}
+
+module.exports = app;
