@@ -23,3 +23,20 @@ export async function GET(request, { params }) {
     return NextResponse.json({ success: false, message: 'Failed to fetch article from database.' }, { status: 500 });
   }
 }
+
+export async function DELETE(request, { params }) {
+  const { id } = params;
+  try {
+    const backendUrl = getBackendUrl();
+    const res = await fetch(`${backendUrl}/api/blogs/${id}`, {
+      method: 'DELETE',
+      headers: {
+        ...(request.headers.get('authorization') ? { 'Authorization': request.headers.get('authorization') } : {})
+      }
+    });
+    const data = await res.json();
+    return NextResponse.json(data, { status: res.status });
+  } catch (err) {
+    return NextResponse.json({ success: false, message: 'Failed to delete article.' }, { status: 500 });
+  }
+}

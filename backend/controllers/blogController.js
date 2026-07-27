@@ -3,7 +3,8 @@ const {
   getBlogsFromDb, 
   getBlogByIdFromDb, 
   toggleLikeBlogInDb,
-  getCategoryCountsFromDb
+  getCategoryCountsFromDb,
+  deleteBlogFromDb
 } = require('../models/blogModel');
 
 async function getBlogs(req, res) {
@@ -132,10 +133,28 @@ async function uploadImageController(req, res) {
   }
 }
 
+async function deleteBlogController(req, res) {
+  try {
+    const { id } = req.params;
+    await deleteBlogFromDb(id);
+
+    // Real-Time Socket.IO Event Broadcast
+    if (req.io) {
+      req.io.emit('blog:deleted', { blogId: id });
+    }
+
+    res.json({ success: true, message: 'Article deleted successfully.' });
+  } catch (error) {
+    console.error('Delete Blog Error:', error);
+    res.status(500).json({ success: false, message: 'Failed to delete article.' });
+  }
+}
+
 module.exports = {
   getBlogs,
   getBlogByIdController,
   createBlogController,
   likeBlogController,
-  uploadImageController
+  uploadImageController,
+  deleteBlogController
 };

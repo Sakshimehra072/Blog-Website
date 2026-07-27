@@ -7,7 +7,8 @@ const {
   getBlogByIdController, 
   createBlogController, 
   likeBlogController, 
-  uploadImageController 
+  uploadImageController,
+  deleteBlogController
 } = require('../controllers/blogController');
 const authMiddleware = require('../middleware/authMiddleware');
 
@@ -23,5 +24,6 @@ router.get('/:id', getBlogByIdController);
 router.post('/', authMiddleware, createBlogController);
 router.post('/:id/like', authMiddleware, likeBlogController);
 router.post('/upload', upload.single('coverImage'), uploadImageController);
+router.delete('/:id', authMiddleware, deleteBlogController);
 
 module.exports = router;

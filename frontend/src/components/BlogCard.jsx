@@ -6,7 +6,7 @@ import CommentButton from './CommentButton';
 import ShareButton from './ShareButton';
 import FavouriteButton from './FavouriteButton';
 
-export default function BlogCard({ blog }) {
+export default function BlogCard({ blog, selectable = false, isSelected = false, onSelectToggle = null }) {
   if (!blog) return null;
 
   const blogId = blog.id;
@@ -35,7 +35,12 @@ export default function BlogCard({ blog }) {
 
   const blogUrl = `/blogs/${blogId}`;
 
-  const handleCardClick = () => {
+  const handleCardClick = (e) => {
+    if (selectable && onSelectToggle) {
+      if (e) e.stopPropagation();
+      onSelectToggle(blogId);
+      return;
+    }
     if (typeof window !== 'undefined') {
       window.location.href = blogUrl;
     }
@@ -51,12 +56,32 @@ export default function BlogCard({ blog }) {
   return (
     <article
       onClick={handleCardClick}
-      className="group bg-white border border-slate-300 shadow-sm hover:border-[#ff9432] hover:shadow-md rounded-xl overflow-hidden flex flex-col justify-between transition-all duration-200 cursor-pointer"
+      className={`group bg-white border shadow-sm rounded-xl overflow-hidden flex flex-col justify-between transition-all duration-200 cursor-pointer relative ${
+        isSelected
+          ? 'border-[#ff9432] ring-2 ring-[#ff9432]/30 shadow-md bg-amber-50/10'
+          : 'border-slate-300 hover:border-[#ff9432] hover:shadow-md'
+      }`}
     >
       <div className="space-y-3">
         
         {/* Cover Image */}
         <div className="relative aspect-[16/9] w-full overflow-hidden bg-slate-100 border-b border-slate-200">
+          {selectable && (
+            <div 
+              onClick={(e) => {
+                e.stopPropagation();
+                if (onSelectToggle) onSelectToggle(blogId);
+              }}
+              className="absolute top-3 left-3 z-20"
+            >
+              <input
+                type="checkbox"
+                checked={isSelected}
+                onChange={() => {}}
+                className="w-5 h-5 rounded-md text-[#ff9432] border-slate-300 focus:ring-[#ff9432] cursor-pointer shadow-sm accent-[#ff9432]"
+              />
+            </div>
+          )}
           <img
             src={coverImage}
             alt={title}

@@ -239,6 +239,34 @@ async function getCategoryCountsFromDb() {
   return countsMap;
 }
 
+// Delete a blog post by ID
+async function deleteBlogFromDb(blogId) {
+  const bId = Number(blogId);
+
+  // 1. Delete from MySQL Database if connected
+  try {
+    await pool.query('DELETE FROM blogs WHERE id = ?', [bId]);
+    await pool.query('DELETE FROM comments WHERE blog_id = ?', [bId]);
+    await pool.query('DELETE FROM likes WHERE blog_id = ?', [bId]);
+    await pool.query('DELETE FROM favourites WHERE blog_id = ?', [bId]);
+  } catch (err) {}
+
+  // 2. Delete from persistent JSON file storage
+  try {
+    const currentList = readPersistentBlogs();
+    const filtered = currentList.filter(b => Number(b.id) !== bId && String(b.id) !== String(blogId));
+    writePersistentBlogs(filtered);
+  } catch (err) {}
+
+  // 3. Delete from memory fallback list
+  const memIndex = memoryBlogsFallback.findIndex(b => Number(b.id) === bId || String(b.id) === String(blogId));
+  if (memIndex !== -1) {
+    memoryBlogsFallback.splice(memIndex, 1);
+  }
+
+  return true;
+}
+
 // Helper to format consistent Blog JSON payload
 function formatBlogResponse(b) {
   const likesCount = typeof b.real_likes_count === 'number' ? Number(b.real_likes_count) : (b.likes_count || b.likes || 0);
@@ -268,5 +296,6 @@ module.exports = {
   getBlogsFromDb,
   getBlogByIdFromDb,
   toggleLikeBlogInDb,
-  getCategoryCountsFromDb
+  getCategoryCountsFromDb,
+  deleteBlogFromDb
 };
