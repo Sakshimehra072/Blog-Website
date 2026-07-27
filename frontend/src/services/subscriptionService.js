@@ -1,6 +1,6 @@
-const API_SUB_URL = process.env.NEXT_PUBLIC_API_URL 
-  ? `${process.env.NEXT_PUBLIC_API_URL}/subscriptions` 
-  : 'http://localhost:5000/api/subscriptions';
+const API_SUB_URL = process.env.NEXT_PUBLIC_API_URL
+  ? `${process.env.NEXT_PUBLIC_API_URL}/subscriptions`
+  : 'https://blog-website-rccc.vercel.app//api/subscriptions';
 
 export async function toggleSubscribeApi(authorId, userId) {
   try {

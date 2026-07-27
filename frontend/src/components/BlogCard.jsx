@@ -106,7 +106,6 @@ export default function BlogCard({ blog }) {
         </div>
       </div>
 
-      {/* Action Toolbar */}
       <div 
         onClick={(e) => e.stopPropagation()} 
         className="px-4 py-2 bg-slate-50/90 border-t border-slate-200 flex items-center justify-between cursor-default text-xs"
