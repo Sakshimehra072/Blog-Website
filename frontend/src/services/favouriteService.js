@@ -1,6 +1,6 @@
-const API_FAVS_URL = process.env.NEXT_PUBLIC_API_URL 
-  ? `${process.env.NEXT_PUBLIC_API_URL}/favourites` 
-  : 'http://localhost:5000/api/favourites';
+const API_FAVS_URL = process.env.NEXT_PUBLIC_API_URL
+  ? `${process.env.NEXT_PUBLIC_API_URL}/favourites`
+  : 'https://blog-website-rccc.vercel.app//api/favourites';
 
 function getAuthHeaders() {
   const token = typeof window !== 'undefined' ? localStorage.getItem('blogverse_token') : null;
@@ -26,7 +26,7 @@ export function setLocalSavedBlogIds(ids) {
   if (typeof window === 'undefined') return;
   try {
     localStorage.setItem('blogverse_saved_blogs', JSON.stringify(ids));
-  } catch (err) {}
+  } catch (err) { }
 }
 
 export function isBlogSavedLocally(blogId) {
@@ -79,7 +79,7 @@ export async function fetchUserFavouritesApi(userId = 'guest_user') {
     if (data && data.success && Array.isArray(data.favourites) && data.favourites.length > 0) {
       return data;
     }
-  } catch (err) {}
+  } catch (err) { }
 
   // Fallback to local saved IDs if backend returns empty or guest mode
   return { success: true, favourites: [] };

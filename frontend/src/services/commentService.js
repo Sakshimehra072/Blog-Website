@@ -1,6 +1,6 @@
-const API_COMMENTS_URL = process.env.NEXT_PUBLIC_API_URL 
-  ? `${process.env.NEXT_PUBLIC_API_URL}/comments` 
-  : 'http://localhost:5000/api/comments';
+const API_COMMENTS_URL = process.env.NEXT_PUBLIC_API_URL
+  ? `${process.env.NEXT_PUBLIC_API_URL}/comments`
+  : 'https://blog-website-rccc.vercel.app//api/comments';
 
 export async function fetchCommentsApi(blogId) {
   try {

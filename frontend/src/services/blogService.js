@@ -1,6 +1,6 @@
-const API_BLOGS_URL = process.env.NEXT_PUBLIC_API_URL 
-  ? `${process.env.NEXT_PUBLIC_API_URL}/blogs` 
-  : 'http://localhost:5000/api/blogs';
+const API_BLOGS_URL = process.env.NEXT_PUBLIC_API_URL
+  ? `${process.env.NEXT_PUBLIC_API_URL}/blogs`
+  : 'https://blog-website-rccc.vercel.app//api/blogs';
 
 function getAuthHeaders() {
   const token = typeof window !== 'undefined' ? localStorage.getItem('blogverse_token') : null;

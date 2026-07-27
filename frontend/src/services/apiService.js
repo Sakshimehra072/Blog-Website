@@ -1,4 +1,4 @@
-const API_BASE_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:5000/api';
+const API_BASE_URL = (process.env.NEXT_PUBLIC_API_URL || 'https://blog-website-rccc.vercel.app/api').replace(/\/+$/, '');
 
 export async function fetchBlogs() {
   try {
@@ -6,7 +6,7 @@ export async function fetchBlogs() {
     if (!res.ok) throw new Error('Failed to fetch blogs');
     return await res.json();
   } catch (error) {
-    console.warn('Backend API offline or unreachable, returning mock data:', error.message);
+    console.warn('Backend API offline or unreachable:', error.message);
     return null;
   }
 }

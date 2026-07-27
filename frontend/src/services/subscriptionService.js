@@ -1,6 +1,5 @@
-const API_SUB_URL = process.env.NEXT_PUBLIC_API_URL
-  ? `${process.env.NEXT_PUBLIC_API_URL}/subscriptions`
-  : 'https://blog-website-rccc.vercel.app//api/subscriptions';
+const BASE_URL = (process.env.NEXT_PUBLIC_API_URL || 'https://blog-website-rccc.vercel.app/api').replace(/\/+$/, '');
+const API_SUB_URL = `${BASE_URL}/subscriptions`;
 
 export async function toggleSubscribeApi(authorId, userId) {
   try {
@@ -20,6 +19,6 @@ export async function fetchSubscriberCountApi(authorId) {
     const res = await fetch(`${API_SUB_URL}/author/${authorId}`);
     return await res.json();
   } catch (err) {
-    return { success: false, subscriberCount: 0 };
+    return { success: false, count: 0 };
   }
 }

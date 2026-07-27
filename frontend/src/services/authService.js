@@ -1,6 +1,5 @@
-const API_AUTH_URL = process.env.NEXT_PUBLIC_API_URL 
-  ? `${process.env.NEXT_PUBLIC_API_URL}/auth` 
-  : 'http://localhost:5000/api/auth';
+const BASE_URL = (process.env.NEXT_PUBLIC_API_URL || 'https://blog-website-rccc.vercel.app/api').replace(/\/+$/, '');
+const API_AUTH_URL = `${BASE_URL}/auth`;
 
 async function handleResponse(response) {
   const data = await response.json();
