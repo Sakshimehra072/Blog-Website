@@ -86,10 +86,18 @@ export default function BlogsPage() {
     if (res && res.success && Array.isArray(res.data)) {
       setBlogs(res.data);
       if (res.categoryCounts) {
-        setCategoriesList(BASE_CATEGORIES.map(cat => ({
-          ...cat,
-          count: res.categoryCounts[cat.name] || (cat.id === 'All' ? (res.categoryCounts['All'] || 0) : 0)
-        })));
+        const countsObj = res.categoryCounts;
+        setCategoriesList(BASE_CATEGORIES.map(cat => {
+          if (cat.id === 'All') {
+            const allVal = countsObj['All'] !== undefined ? countsObj['All'] : countsObj['all'];
+            return { ...cat, count: typeof allVal === 'number' ? allVal : 0 };
+          }
+          const matchKey = Object.keys(countsObj).find(k => k.toLowerCase() === cat.name.toLowerCase());
+          return {
+            ...cat,
+            count: matchKey ? countsObj[matchKey] : 0
+          };
+        }));
       }
     } else if (Array.isArray(res)) {
       setBlogs(res);

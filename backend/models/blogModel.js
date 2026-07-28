@@ -89,17 +89,6 @@ async function getBlogsFromDb({ category = null, page = 1, limit = 100 }) {
   const limitNum = Math.max(1, parseInt(limit) || 100);
   const offset = (pageNum - 1) * limitNum;
 
-  let allBlogsMap = new Map();
-
-  // Load from persistent file & memory fallback
-  const fileBlogs = readPersistentBlogs();
-  fileBlogs.forEach(b => {
-    allBlogsMap.set(String(b.id), formatBlogResponse(b));
-  });
-  memoryBlogsFallback.forEach(b => {
-    allBlogsMap.set(String(b.id), formatBlogResponse(b));
-  });
-
   try {
     let query = `
       SELECT b.*, 
@@ -112,7 +101,7 @@ async function getBlogsFromDb({ category = null, page = 1, limit = 100 }) {
     `;
     const params = [];
 
-    if (category && category.trim()) {
+    if (category && category.trim() && category !== 'All') {
       query += ` WHERE LOWER(b.category) = LOWER(?)`;
       params.push(category.trim());
     }
@@ -120,14 +109,24 @@ async function getBlogsFromDb({ category = null, page = 1, limit = 100 }) {
     query += ` ORDER BY b.created_at DESC LIMIT ${limitNum} OFFSET ${offset}`;
 
     const [rows] = await pool.query(query, params);
-    rows.forEach(r => {
-      allBlogsMap.set(String(r.id), formatBlogResponse(r));
-    });
+    if (Array.isArray(rows) && rows.length > 0) {
+      return rows.map(r => formatBlogResponse(r));
+    }
   } catch (err) {}
+
+  // Fallback to persistent file & memory fallback
+  let allBlogsMap = new Map();
+  const fileBlogs = readPersistentBlogs();
+  fileBlogs.forEach(b => {
+    allBlogsMap.set(String(b.id), formatBlogResponse(b));
+  });
+  memoryBlogsFallback.forEach(b => {
+    allBlogsMap.set(String(b.id), formatBlogResponse(b));
+  });
 
   let combined = Array.from(allBlogsMap.values());
 
-  if (category && category.trim()) {
+  if (category && category.trim() && category !== 'All') {
     combined = combined.filter(b => b.category && b.category.toLowerCase() === category.trim().toLowerCase());
   }
 
@@ -215,6 +214,20 @@ async function toggleLikeBlogInDb(userId, blogId) {
 async function getCategoryCountsFromDb() {
   const countsMap = {};
 
+  try {
+    const [totalRows] = await pool.query('SELECT COUNT(*) as total FROM blogs');
+    countsMap['All'] = totalRows.length > 0 ? Number(totalRows[0].total) : 0;
+
+    const [rows] = await pool.query('SELECT category, COUNT(*) as count FROM blogs GROUP BY category');
+    rows.forEach(r => {
+      if (r.category) {
+        countsMap[r.category] = Number(r.count);
+      }
+    });
+
+    return countsMap;
+  } catch (err) {}
+
   const fileBlogs = readPersistentBlogs();
   const allList = [...fileBlogs, ...memoryBlogsFallback];
   countsMap['All'] = allList.length;
@@ -223,18 +236,6 @@ async function getCategoryCountsFromDb() {
       countsMap[b.category] = (countsMap[b.category] || 0) + 1;
     }
   });
-
-  try {
-    const [totalRows] = await pool.query('SELECT COUNT(*) as total FROM blogs');
-    countsMap['All'] = Math.max(countsMap['All'] || 0, totalRows.length > 0 ? totalRows[0].total : 0);
-
-    const [rows] = await pool.query('SELECT category, COUNT(*) as count FROM blogs GROUP BY category');
-    rows.forEach(r => {
-      if (r.category) {
-        countsMap[r.category] = Math.max(countsMap[r.category] || 0, r.count);
-      }
-    });
-  } catch (err) {}
 
   return countsMap;
 }

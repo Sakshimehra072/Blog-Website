@@ -94,13 +94,14 @@ async function parseJsonResponse(res) {
 export async function fetchBlogsApi(category = null, page = 1, limit = 100) {
   let serverBlogs = [];
   let categoryCounts = null;
+  let serverResponded = false;
 
   const tryEndpoints = [PRIMARY_API_URL, getFallbackApiUrl(), '/api'];
 
   for (const baseUrl of tryEndpoints) {
     try {
       let url = `${baseUrl}/blogs?page=${page}&limit=${limit}`;
-      if (category) {
+      if (category && category !== 'All') {
         url += `&category=${encodeURIComponent(category)}`;
       }
       const res = await fetch(url);
@@ -109,33 +110,33 @@ export async function fetchBlogsApi(category = null, page = 1, limit = 100) {
       if (data && data.success && Array.isArray(data.data)) {
         serverBlogs = data.data;
         categoryCounts = data.categoryCounts || null;
-        if (serverBlogs.length > 0) break;
-      } else if (Array.isArray(data) && data.length > 0) {
+        serverResponded = true;
+        break;
+      } else if (Array.isArray(data)) {
         serverBlogs = data;
+        serverResponded = true;
         break;
       }
     } catch (err) { }
   }
 
-  // Merge server blogs with locally published blogs fallback
-  const localBlogs = getLocalStorageBlogs();
-  const blogsMap = new Map();
+  // Merge server blogs with locally published blogs fallback if server didn't respond
+  let combined = [...serverBlogs];
+  if (!serverResponded || combined.length === 0) {
+    const localBlogs = getLocalStorageBlogs();
+    const blogsMap = new Map();
 
-  // Load server blogs first
-  serverBlogs.forEach(b => {
-    blogsMap.set(String(b.id), b);
-  });
+    serverBlogs.forEach(b => blogsMap.set(String(b.id), b));
+    localBlogs.forEach(b => {
+      if (!blogsMap.has(String(b.id))) {
+        blogsMap.set(String(b.id), b);
+      }
+    });
 
-  // Merge locally created blogs so user uploads are guaranteed visible
-  localBlogs.forEach(b => {
-    if (!blogsMap.has(String(b.id))) {
-      blogsMap.set(String(b.id), b);
-    }
-  });
+    combined = Array.from(blogsMap.values());
+  }
 
-  let combined = Array.from(blogsMap.values());
-
-  // Category filtering
+  // Category filtering on client if category parameter specified
   if (category && category.trim() && category !== 'All') {
     combined = combined.filter(b => b.category && b.category.toLowerCase() === category.trim().toLowerCase());
   }
@@ -143,7 +144,7 @@ export async function fetchBlogsApi(category = null, page = 1, limit = 100) {
   // Sort latest first
   combined.sort((a, b) => new Date(b.createdAt || b.created_at || 0) - new Date(a.createdAt || a.created_at || 0));
 
-  // Compute updated category counts
+  // Compute fallback category counts if server didn't return them
   if (!categoryCounts) {
     categoryCounts = { All: combined.length };
     combined.forEach(b => {
