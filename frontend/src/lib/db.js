@@ -5,7 +5,7 @@ const isCloudDb = process.env.DB_HOST && !process.env.DB_HOST.includes('localhos
 const pool = mysql.createPool({
   host: process.env.DB_HOST || 'localhost',
   user: process.env.DB_USER || 'root',
-  password: process.env.DB_PASSWORD !== undefined ? process.env.DB_PASSWORD : 'Sakshi@sql123',
+  password: process.env.DB_PASSWORD || '',
   database: process.env.DB_NAME || 'blogverse_db',
   port: parseInt(process.env.DB_PORT || '3306'),
   waitForConnections: true,
