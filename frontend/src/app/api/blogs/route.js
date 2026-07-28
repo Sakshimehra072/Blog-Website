@@ -1,42 +1,33 @@
 import { NextResponse } from 'next/server';
-
-function getBackendUrl(request) {
-  if (process.env.BACKEND_URL) return process.env.BACKEND_URL.replace(/\/+$/, '');
-  if (process.env.NEXT_PUBLIC_API_URL) return process.env.NEXT_PUBLIC_API_URL.replace(/\/+$/, '').replace(/\/api$/, '');
-  if (request && typeof request.headers?.get === 'function') {
-    const host = request.headers.get('host');
-    const proto = request.headers.get('x-forwarded-proto') || 'https';
-    if (host && !host.includes('localhost') && !host.includes('127.0.0.1')) {
-      return `${proto}://${host}`;
-    }
-  }
-  return 'http://localhost:5000';
-}
+import { 
+  createBlogInDb, 
+  getBlogsFromDb, 
+  getCategoryCountsFromDb 
+} from '../../../../../backend/models/blogModel';
 
 export async function GET(request) {
   try {
     const { searchParams } = new URL(request.url);
-    const backendUrl = getBackendUrl(request);
+    const category = searchParams.get('category');
+    const page = searchParams.get('page') || 1;
+    const limit = searchParams.get('limit') || 100;
 
-    // Fetch directly from your Express Node.js & MySQL backend
-    const res = await fetch(`${backendUrl}/api/blogs?${searchParams.toString()}`, {
-      cache: 'no-store'
+    const blogs = await getBlogsFromDb({ category, page, limit });
+    const categoryCounts = await getCategoryCountsFromDb();
+
+    return NextResponse.json({
+      success: true,
+      data: blogs,
+      categoryCounts,
+      page: parseInt(page),
+      limit: parseInt(limit),
+      count: blogs.length
     });
-
-    if (res.ok) {
-      const data = await res.json();
-      return NextResponse.json(data);
-    }
-
-    return NextResponse.json({
-      success: false,
-      message: `Backend API server returned status ${res.status}`,
-      data: []
-    }, { status: res.status });
   } catch (err) {
+    console.error('API GET /api/blogs error:', err);
     return NextResponse.json({
       success: false,
-      message: 'Failed to connect to backend database API server.',
+      message: 'Failed to fetch blogs.',
       data: []
     }, { status: 500 });
   }
@@ -45,24 +36,28 @@ export async function GET(request) {
 export async function POST(request) {
   try {
     const body = await request.json();
-    const backendUrl = getBackendUrl(request);
 
-    // Forward publish request directly to your Express Node.js & MySQL backend
-    const res = await fetch(`${backendUrl}/api/blogs`, {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-        ...(request.headers.get('authorization') ? { 'Authorization': request.headers.get('authorization') } : {})
-      },
-      body: JSON.stringify(body)
+    const newBlog = await createBlogInDb({
+      title: body.title,
+      category: body.category,
+      coverImage: body.coverImage || body.cover_image,
+      description: body.description || body.content,
+      authorId: body.authorId || body.author_id,
+      authorName: body.authorName || body.author_name || 'Registered Author',
+      authorAvatar: body.authorAvatar || body.author_avatar,
+      readTime: body.readTime || body.read_time
     });
 
-    const data = await res.json();
-    return NextResponse.json(data, { status: res.status });
+    return NextResponse.json({
+      success: true,
+      message: '🎉 Article published successfully!',
+      blog: newBlog
+    }, { status: 201 });
   } catch (err) {
+    console.error('API POST /api/blogs error:', err);
     return NextResponse.json({
       success: false,
-      message: err.message || 'Failed to connect to backend database API server.'
+      message: err.message || 'Failed to publish blog.'
     }, { status: 500 });
   }
 }
