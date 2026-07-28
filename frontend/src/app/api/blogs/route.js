@@ -1,18 +1,22 @@
 import { NextResponse } from 'next/server';
 
-function getBackendUrl() {
-  const envUrl = process.env.BACKEND_URL || process.env.NEXT_PUBLIC_API_URL || 'http://localhost:5000';
-  let clean = envUrl.replace(/\/+$/, '');
-  if (clean.endsWith('/api')) {
-    clean = clean.replace(/\/api$/, '');
+function getBackendUrl(request) {
+  if (process.env.BACKEND_URL) return process.env.BACKEND_URL.replace(/\/+$/, '');
+  if (process.env.NEXT_PUBLIC_API_URL) return process.env.NEXT_PUBLIC_API_URL.replace(/\/+$/, '').replace(/\/api$/, '');
+  if (request && typeof request.headers?.get === 'function') {
+    const host = request.headers.get('host');
+    const proto = request.headers.get('x-forwarded-proto') || 'https';
+    if (host && !host.includes('localhost') && !host.includes('127.0.0.1')) {
+      return `${proto}://${host}`;
+    }
   }
-  return clean;
+  return 'http://localhost:5000';
 }
 
 export async function GET(request) {
   try {
     const { searchParams } = new URL(request.url);
-    const backendUrl = getBackendUrl();
+    const backendUrl = getBackendUrl(request);
 
     // Fetch directly from your Express Node.js & MySQL backend
     const res = await fetch(`${backendUrl}/api/blogs?${searchParams.toString()}`, {
@@ -41,7 +45,7 @@ export async function GET(request) {
 export async function POST(request) {
   try {
     const body = await request.json();
-    const backendUrl = getBackendUrl();
+    const backendUrl = getBackendUrl(request);
 
     // Forward publish request directly to your Express Node.js & MySQL backend
     const res = await fetch(`${backendUrl}/api/blogs`, {

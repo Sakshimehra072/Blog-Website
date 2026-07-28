@@ -24,6 +24,14 @@ function getFallbackApiUrl() {
   return PRIMARY_API_URL.includes('localhost') ? HOSTED_VERCEL_API : LOCAL_HOST_API;
 }
 
+function getTryEndpoints() {
+  if (typeof window !== 'undefined') {
+    const origin = window.location.origin.replace(/\/+$/, '');
+    return [`${origin}/api`, '/api', PRIMARY_API_URL, getFallbackApiUrl()];
+  }
+  return [PRIMARY_API_URL, getFallbackApiUrl(), '/api'];
+}
+
 const LOCAL_STORAGE_KEY = 'blogverse_user_blogs';
 
 function getLocalStorageBlogs() {
@@ -96,7 +104,7 @@ export async function fetchBlogsApi(category = null, page = 1, limit = 100) {
   let categoryCounts = null;
   let serverResponded = false;
 
-  const tryEndpoints = [PRIMARY_API_URL, getFallbackApiUrl(), '/api'];
+  const tryEndpoints = getTryEndpoints();
 
   for (const baseUrl of tryEndpoints) {
     try {
@@ -163,7 +171,7 @@ export async function fetchBlogsApi(category = null, page = 1, limit = 100) {
 
 // Fetch single blog by ID with fail-safe fallback lookup
 export async function fetchBlogByIdApi(id) {
-  const tryEndpoints = [PRIMARY_API_URL, getFallbackApiUrl(), '/api'];
+  const tryEndpoints = getTryEndpoints();
 
   for (const baseUrl of tryEndpoints) {
     try {
@@ -199,7 +207,7 @@ export async function fetchBlogByIdApi(id) {
 // Publish new blog to the backend API database with dual-endpoint attempt + client local storage backup
 export async function createBlogApi(blogData) {
   let createdBlog = null;
-  const tryEndpoints = [PRIMARY_API_URL, getFallbackApiUrl(), '/api'];
+  const tryEndpoints = getTryEndpoints();
 
   for (const baseUrl of tryEndpoints) {
     try {
@@ -302,7 +310,7 @@ export async function deleteBlogApi(id) {
   // Always clean up from local browser storage
   removeLocalStorageBlog(id);
 
-  const tryEndpoints = [PRIMARY_API_URL, getFallbackApiUrl(), '/api'];
+  const tryEndpoints = getTryEndpoints();
   let lastError = null;
 
   for (const baseUrl of tryEndpoints) {
@@ -327,7 +335,7 @@ export async function deleteBlogApi(id) {
 
 // Update existing blog post by ID
 export async function updateBlogApi(id, blogData) {
-  const tryEndpoints = [PRIMARY_API_URL, getFallbackApiUrl(), '/api'];
+  const tryEndpoints = getTryEndpoints();
   for (const baseUrl of tryEndpoints) {
     try {
       const res = await fetch(`${baseUrl}/blogs/${id}`, {
