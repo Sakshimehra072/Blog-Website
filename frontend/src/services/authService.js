@@ -69,30 +69,14 @@ export async function registerApi(name, email, password) {
     }
     return data;
   } catch (err) {
-    // If backend is in serverless mode or offline, fallback to local registration
-    const cleanEmail = email.trim().toLowerCase();
-    const cleanName = name.trim();
-    const localUser = {
-      id: Date.now(),
-      name: cleanName,
-      username: cleanName,
-      email: cleanEmail,
-      avatar_url: null
-    };
-    saveLocalRegisteredUser(localUser, password);
-    const fakeToken = `local_jwt_${Date.now()}`;
     return {
-      success: true,
-      message: 'Account created successfully!',
-      token: fakeToken,
-      user: localUser
+      success: false,
+      message: err.message || 'Registration failed. Could not save user to database.'
     };
   }
 }
 
 export async function loginApi(emailOrName, password) {
-  const cleanInput = emailOrName.trim().toLowerCase();
-
   try {
     const res = await fetch(`${API_AUTH_URL}/login`, {
       method: 'POST',
@@ -105,31 +89,10 @@ export async function loginApi(emailOrName, password) {
     }
     return data;
   } catch (err) {
-    // Fallback: Check local registered users if backend returned error or serverless reset
-    const localUsers = getLocalRegisteredUsers();
-    const match = localUsers.find(u => 
-      u.email.toLowerCase() === cleanInput || u.name.toLowerCase() === cleanInput
-    );
-    if (match) {
-      if (match.password === password) {
-        const fakeToken = `local_jwt_${Date.now()}`;
-        return {
-          success: true,
-          message: 'Sign in successful!',
-          token: fakeToken,
-          user: {
-            id: match.id,
-            name: match.name,
-            username: match.name,
-            email: match.email,
-            avatar_url: match.avatar_url || null
-          }
-        };
-      } else {
-        throw new Error('Incorrect password. Please verify your password and try again.');
-      }
-    }
-    throw err;
+    return {
+      success: false,
+      message: err.message || 'Invalid email/username or password.'
+    };
   }
 }
 
