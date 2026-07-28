@@ -324,3 +324,26 @@ export async function deleteBlogApi(id) {
   return { success: true, message: 'Article deleted successfully.' };
 }
 
+// Update existing blog post by ID
+export async function updateBlogApi(id, blogData) {
+  const tryEndpoints = [PRIMARY_API_URL, getFallbackApiUrl(), '/api'];
+  for (const baseUrl of tryEndpoints) {
+    try {
+      const res = await fetch(`${baseUrl}/blogs/${id}`, {
+        method: 'PUT',
+        headers: getAuthHeaders(),
+        body: JSON.stringify(blogData)
+      });
+      const data = await parseJsonResponse(res);
+      if (data && (data.success || data.blog)) {
+        if (data.blog) saveLocalStorageBlog(data.blog);
+        return data;
+      }
+    } catch (err) { }
+  }
+
+  // Local storage fallback
+  const localUpdated = saveLocalStorageBlog({ id, ...blogData });
+  return { success: true, message: 'Article updated successfully!', blog: localUpdated };
+}
+

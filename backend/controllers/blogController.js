@@ -4,7 +4,8 @@ const {
   getBlogByIdFromDb, 
   toggleLikeBlogInDb,
   getCategoryCountsFromDb,
-  deleteBlogFromDb
+  deleteBlogFromDb,
+  updateBlogInDb
 } = require('../models/blogModel');
 
 async function getBlogs(req, res) {
@@ -150,11 +151,35 @@ async function deleteBlogController(req, res) {
   }
 }
 
+async function updateBlogController(req, res) {
+  try {
+    const { id } = req.params;
+    const { title, category, coverImage, description } = req.body;
+
+    const updatedBlog = await updateBlogInDb(id, { title, category, coverImage, description });
+
+    // Real-Time Socket.IO Event Broadcast
+    if (req.io) {
+      req.io.emit('blog:updated', updatedBlog);
+    }
+
+    res.json({
+      success: true,
+      message: 'Article updated successfully!',
+      blog: updatedBlog
+    });
+  } catch (error) {
+    console.error('Update Blog Error:', error);
+    res.status(500).json({ success: false, message: 'Failed to update blog.' });
+  }
+}
+
 module.exports = {
   getBlogs,
   getBlogByIdController,
   createBlogController,
   likeBlogController,
   uploadImageController,
-  deleteBlogController
+  deleteBlogController,
+  updateBlogController
 };

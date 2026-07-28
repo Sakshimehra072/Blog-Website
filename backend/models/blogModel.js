@@ -267,6 +267,45 @@ async function deleteBlogFromDb(blogId) {
   return true;
 }
 
+// Update an existing blog post
+async function updateBlogInDb(blogId, { title, category, coverImage, description }) {
+  const bId = Number(blogId);
+
+  // 1. Update in MySQL Database if connected
+  try {
+    await pool.query(
+      `UPDATE blogs 
+       SET title = ?, category = ?, cover_image = ?, description = ?, updated_at = NOW() 
+       WHERE id = ?`,
+      [title, category, coverImage, description, bId]
+    );
+  } catch (err) {}
+
+  // 2. Update in persistent JSON file storage
+  try {
+    const currentList = readPersistentBlogs();
+    const blogIndex = currentList.findIndex(b => Number(b.id) === bId || String(b.id) === String(blogId));
+    if (blogIndex !== -1) {
+      if (title) currentList[blogIndex].title = title;
+      if (category) currentList[blogIndex].category = category;
+      if (coverImage) currentList[blogIndex].cover_image = coverImage;
+      if (description) currentList[blogIndex].description = description;
+      writePersistentBlogs(currentList);
+    }
+  } catch (err) {}
+
+  // 3. Update in memory fallback list
+  const memIndex = memoryBlogsFallback.findIndex(b => Number(b.id) === bId || String(b.id) === String(blogId));
+  if (memIndex !== -1) {
+    if (title) memoryBlogsFallback[memIndex].title = title;
+    if (category) memoryBlogsFallback[memIndex].category = category;
+    if (coverImage) memoryBlogsFallback[memIndex].cover_image = coverImage;
+    if (description) memoryBlogsFallback[memIndex].description = description;
+  }
+
+  return await getBlogByIdFromDb(blogId);
+}
+
 // Helper to format consistent Blog JSON payload
 function formatBlogResponse(b) {
   const likesCount = typeof b.real_likes_count === 'number' ? Number(b.real_likes_count) : (b.likes_count || b.likes || 0);
@@ -297,5 +336,6 @@ module.exports = {
   getBlogByIdFromDb,
   toggleLikeBlogInDb,
   getCategoryCountsFromDb,
-  deleteBlogFromDb
+  deleteBlogFromDb,
+  updateBlogInDb
 };

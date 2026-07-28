@@ -125,6 +125,10 @@ export default function BlogsPage() {
       loadBlogs(false);
     };
 
+    const handleBlogUpdated = () => {
+      loadBlogs(false);
+    };
+
     const handleCommentAdded = (data) => {
       setBlogs(prev => prev.map(blog => {
         if (String(blog.id) === String(data.blogId)) {
@@ -154,12 +158,14 @@ export default function BlogsPage() {
 
     socket.on('blog:published', handleBlogPublished);
     socket.on('blog:deleted', handleBlogDeleted);
+    socket.on('blog:updated', handleBlogUpdated);
     socket.on('comment:added', handleCommentAdded);
     socket.on('blog:liked', handleBlogLiked);
 
     return () => {
       socket.off('blog:published', handleBlogPublished);
       socket.off('blog:deleted', handleBlogDeleted);
+      socket.off('blog:updated', handleBlogUpdated);
       socket.off('comment:added', handleCommentAdded);
       socket.off('blog:liked', handleBlogLiked);
     };

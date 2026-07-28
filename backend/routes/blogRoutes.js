@@ -8,7 +8,8 @@ const {
   createBlogController, 
   likeBlogController, 
   uploadImageController,
-  deleteBlogController
+  deleteBlogController,
+  updateBlogController
 } = require('../controllers/blogController');
 const authMiddleware = require('../middleware/authMiddleware');
 
@@ -22,6 +23,7 @@ const upload = multer({
 router.get('/', getBlogs);
 router.get('/:id', getBlogByIdController);
 router.post('/', authMiddleware, createBlogController);
+router.put('/:id', authMiddleware, updateBlogController);
 router.post('/:id/like', authMiddleware, likeBlogController);
 router.post('/upload', upload.single('coverImage'), uploadImageController);
 router.delete('/:id', authMiddleware, deleteBlogController);

@@ -40,3 +40,23 @@ export async function DELETE(request, { params }) {
     return NextResponse.json({ success: false, message: 'Failed to delete article.' }, { status: 500 });
   }
 }
+
+export async function PUT(request, { params }) {
+  const { id } = params;
+  try {
+    const body = await request.json();
+    const backendUrl = getBackendUrl();
+    const res = await fetch(`${backendUrl}/api/blogs/${id}`, {
+      method: 'PUT',
+      headers: {
+        'Content-Type': 'application/json',
+        ...(request.headers.get('authorization') ? { 'Authorization': request.headers.get('authorization') } : {})
+      },
+      body: JSON.stringify(body)
+    });
+    const data = await res.json();
+    return NextResponse.json(data, { status: res.status });
+  } catch (err) {
+    return NextResponse.json({ success: false, message: 'Failed to update article.' }, { status: 500 });
+  }
+}
