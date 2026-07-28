@@ -1,12 +1,12 @@
 'use client';
 
 import React, { createContext, useContext, useState, useEffect } from 'react';
-import { 
-  registerApi, 
-  loginApi, 
-  googleLoginApi, 
+import {
+  registerApi,
+  loginApi,
+  googleLoginApi,
   getMeApi,
-  updateProfileApi 
+  updateProfileApi
 } from '../services/authService';
 
 const AuthContext = createContext({
@@ -14,11 +14,11 @@ const AuthContext = createContext({
   token: null,
   isLoggedIn: false,
   loading: true,
-  register: async () => {},
-  login: async () => {},
-  googleLogin: async () => {},
-  updateProfile: async () => {},
-  logout: () => {},
+  register: async () => { },
+  login: async () => { },
+  googleLogin: async () => { },
+  updateProfile: async () => { },
+  logout: () => { },
 });
 
 export function AuthProvider({ children }) {
@@ -31,13 +31,13 @@ export function AuthProvider({ children }) {
     async function restoreSession() {
       const storedToken = localStorage.getItem('blogverse_token');
       const storedUser = localStorage.getItem('blogverse_user');
-      
+
       if (storedToken) {
         setToken(storedToken);
         if (storedUser) {
           try {
             setUser(JSON.parse(storedUser));
-          } catch (e) {}
+          } catch (e) { }
         }
         // Safely verify profile with backend without invalidating stored user session
         try {
@@ -46,7 +46,7 @@ export function AuthProvider({ children }) {
             setUser(res.user);
             localStorage.setItem('blogverse_user', JSON.stringify(res.user));
           }
-        } catch (err) {}
+        } catch (err) { }
       }
       setLoading(false);
     }
@@ -58,7 +58,7 @@ export function AuthProvider({ children }) {
     setUser(userData);
     localStorage.setItem('blogverse_token', authToken);
     localStorage.setItem('blogverse_user', JSON.stringify(userData));
-  };
+  }; +
 
   const register = async (name, email, password) => {
     const res = await registerApi(name, email, password);

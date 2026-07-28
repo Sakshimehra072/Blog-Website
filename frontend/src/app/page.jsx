@@ -67,11 +67,21 @@ export default function HomePage() {
 
   const [activeCategory, setActiveCategory] = useState('All');
   const [categoriesList, setCategoriesList] = useState(BASE_CATEGORIES);
-  const [page, setPage] = useState(1);
   const [blogs, setBlogs] = useState([]);
   const [loading, setLoading] = useState(true);
   const [searchQuery, setSearchQuery] = useState('');
   const [publishToast, setPublishToast] = useState('');
+  const [isMobile, setIsMobile] = useState(false);
+
+  // Responsive screen size listener for Desktop (20) vs Mobile (5) limits
+  useEffect(() => {
+    const handleResize = () => {
+      setIsMobile(typeof window !== 'undefined' && window.innerWidth < 768);
+    };
+    handleResize();
+    window.addEventListener('resize', handleResize);
+    return () => window.removeEventListener('resize', handleResize);
+  }, []);
 
   const handleOpenAuthModal = (mode = 'login', msg = '', redirectUrl = '') => {
     setAuthModalMode(mode);
@@ -93,10 +103,12 @@ export default function HomePage() {
 
   const loadBlogs = useCallback(async (showLoading = true) => {
     if (showLoading) setLoading(true);
+    const limit = isMobile ? 5 : 20;
     const queryCategory = (activeCategory === 'All' || !activeCategory) ? null : activeCategory;
-    const res = await fetchBlogsApi(queryCategory, page, 100);
+    const res = await fetchBlogsApi(queryCategory, 1, limit);
+
     if (res && res.success && Array.isArray(res.data)) {
-      setBlogs(res.data);
+      setBlogs(res.data.slice(0, limit));
       if (res.categoryCounts) {
         setCategoriesList(BASE_CATEGORIES.map(cat => ({
           ...cat,
@@ -104,12 +116,12 @@ export default function HomePage() {
         })));
       }
     } else if (Array.isArray(res)) {
-      setBlogs(res);
+      setBlogs(res.slice(0, limit));
     } else {
       setBlogs([]);
     }
     if (showLoading) setLoading(false);
-  }, [activeCategory, page]);
+  }, [activeCategory, isMobile]);
 
   useEffect(() => {
     if (typeof window !== 'undefined') {
@@ -159,17 +171,11 @@ export default function HomePage() {
     const socket = getSocket();
 
     const handleBlogPublished = (newBlog) => {
-      if (newBlog && newBlog.id) {
-        setBlogs(prev => [newBlog, ...prev.filter(b => Number(b.id) !== Number(newBlog.id))]);
-        setCategoriesList(prev => prev.map(cat => {
-          if (cat.id === 'All' || (newBlog.category && cat.name.toLowerCase() === newBlog.category.toLowerCase())) {
-            return { ...cat, count: (cat.count || 0) + 1 };
-          }
-          return cat;
-        }));
-      } else {
-        loadBlogs(false);
-      }
+      loadBlogs(false);
+    };
+
+    const handleBlogDeleted = (data) => {
+      loadBlogs(false);
     };
 
     const handleCommentAdded = (data) => {
@@ -200,11 +206,13 @@ export default function HomePage() {
     };
 
     socket.on('blog:published', handleBlogPublished);
+    socket.on('blog:deleted', handleBlogDeleted);
     socket.on('comment:added', handleCommentAdded);
     socket.on('blog:liked', handleBlogLiked);
 
     return () => {
       socket.off('blog:published', handleBlogPublished);
+      socket.off('blog:deleted', handleBlogDeleted);
       socket.off('comment:added', handleCommentAdded);
       socket.off('blog:liked', handleBlogLiked);
     };
@@ -225,6 +233,9 @@ export default function HomePage() {
     const authorMatch = b.author?.name && b.author.name.toLowerCase().includes(q);
     return titleMatch || descMatch || catMatch || authorMatch;
   });
+
+  const displayLimit = isMobile ? 5 : 20;
+  const displayedBlogs = filteredBlogs.slice(0, displayLimit);
 
   return (
     <div className="min-h-screen flex flex-col justify-between bg-slate-50">
@@ -259,16 +270,16 @@ export default function HomePage() {
               <button
                 type="button"
                 onClick={handleWriteArticleClick}
-                className="px-5 py-2.5 rounded-lg text-xs font-semibold bg-[#ff9432] hover:bg-[#e88325] text-white transition-all shadow-xs flex items-center gap-2"
+                className="px-5 py-2.5 rounded-lg text-xs font-semibold bg-[#ff9432] hover:bg-[#e88325] text-white transition-all shadow-xs flex items-center gap-2 cursor-pointer"
               >
                 <PenTool className="w-3.5 h-3.5" /> Write Article
               </button>
               
               <a 
-                href="#blogs"
+                href="/blogs"
                 className="px-5 py-2.5 rounded-lg text-xs font-semibold bg-white border border-slate-200 hover:bg-slate-50 text-slate-700 transition-colors flex items-center gap-1.5"
               >
-                Explore Recent Uploads <ArrowRight className="w-3.5 h-3.5 text-slate-400" />
+                Explore All Blogs <ArrowRight className="w-3.5 h-3.5 text-slate-400" />
               </a>
             </div>
           </div>
@@ -280,17 +291,21 @@ export default function HomePage() {
           activeCategory={activeCategory}
           onSelectCategory={(catId) => {
             setActiveCategory(catId || 'All');
-            setPage(1);
           }}
         />
 
         {/* Recent Uploads & Search Results Section */}
         <section id="blogs" className="space-y-6">
           <div className="flex items-center justify-between flex-wrap gap-3">
-            <h2 className="text-xl font-bold text-slate-900 tracking-tight flex items-center gap-2">
-              <TrendingUp className="w-5 h-5 text-[#ff9432]" />
-              {searchQuery ? `Search Results for "${searchQuery}"` : (activeCategory === 'All' ? 'Recent Uploads' : `${activeCategory} Articles`)}
-            </h2>
+            <div className="space-y-1">
+              <h2 className="text-xl font-bold text-slate-900 tracking-tight flex items-center gap-2">
+                <TrendingUp className="w-5 h-5 text-[#ff9432]" />
+                {searchQuery ? `Search Results for "${searchQuery}"` : (activeCategory === 'All' ? 'Recent Uploads' : `${activeCategory} Articles`)}
+              </h2>
+              <p className="text-xs text-slate-500 font-medium">
+                {isMobile ? 'Showing latest 5 posts for mobile' : 'Showing latest 20 posts for desktop'}
+              </p>
+            </div>
 
             <div className="flex items-center gap-2">
               {searchQuery && (
@@ -306,7 +321,6 @@ export default function HomePage() {
                 <button
                   onClick={() => {
                     setActiveCategory('All');
-                    setPage(1);
                   }}
                   className="text-xs font-semibold px-3 py-1.5 rounded-lg bg-amber-50 text-amber-900 border border-amber-200 hover:bg-amber-100 transition-colors"
                 >
@@ -320,11 +334,23 @@ export default function HomePage() {
             <div className="p-12 text-center text-xs text-slate-500 font-medium">
               Loading recent articles...
             </div>
-          ) : filteredBlogs.length > 0 ? (
-            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-              {filteredBlogs.map((post) => (
-                <BlogCard key={post.id} blog={post} />
-              ))}
+          ) : displayedBlogs.length > 0 ? (
+            <div className="space-y-8">
+              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+                {displayedBlogs.map((post) => (
+                  <BlogCard key={post.id} blog={post} />
+                ))}
+              </div>
+
+              {/* View More Button linking to /blogs */}
+              <div className="pt-6 flex justify-center">
+                <a
+                  href="/blogs"
+                  className="px-6 py-3 rounded-xl font-bold text-xs bg-[#ff9432] hover:bg-[#e88325] text-white shadow-md hover:shadow-lg transition-all flex items-center gap-2 tracking-wide uppercase cursor-pointer"
+                >
+                  View More Articles <ArrowRight className="w-4 h-4" />
+                </a>
+              </div>
             </div>
           ) : (
             <div className="bg-white rounded-2xl p-10 sm:p-12 text-center border border-slate-300 max-w-md mx-auto my-8 space-y-4 shadow-sm">
@@ -350,10 +376,6 @@ export default function HomePage() {
                 </a>
               </div>
             </div>
-          )}
-
-          {filteredBlogs.length >= 20 && (
-            <Pagination currentPage={page} totalPages={Math.ceil(filteredBlogs.length / 20) + 1} onPageChange={(p) => setPage(p)} />
           )}
         </section>
 

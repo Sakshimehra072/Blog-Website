@@ -56,7 +56,7 @@ export default function Header({ onOpenAuthModal, onFocusSearch }) {
                 <HomeIcon className="w-4 h-4 text-slate-500" /> Home
               </a>
               
-              <a href="/#blogs" className="flex items-center gap-1.5 hover:text-[#ff9432] transition-colors text-slate-600">
+              <a href="/blogs" className="flex items-center gap-1.5 hover:text-[#ff9432] transition-colors text-slate-600">
                 <BookOpen className="w-4 h-4 text-slate-500" /> Blogs
               </a>
 
@@ -132,7 +132,7 @@ export default function Header({ onOpenAuthModal, onFocusSearch }) {
             </a>
 
             <a 
-              href="/#blogs" 
+              href="/blogs" 
               onClick={() => setIsMobileMenuOpen(false)}
               className="flex items-center gap-2.5 py-1.5 hover:text-[#ff9432] transition-colors"
             >
