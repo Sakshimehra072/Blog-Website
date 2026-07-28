@@ -26,10 +26,13 @@ function getFallbackApiUrl() {
 
 function getTryEndpoints() {
   if (typeof window !== 'undefined') {
-    const origin = window.location.origin.replace(/\/+$/, '');
-    return [`${origin}/api`, '/api', PRIMARY_API_URL, getFallbackApiUrl()];
+    const host = window.location.hostname;
+    if (host === 'localhost' || host === '127.0.0.1') {
+      return ['/api', LOCAL_HOST_API];
+    }
+    return ['/api'];
   }
-  return [PRIMARY_API_URL, getFallbackApiUrl(), '/api'];
+  return [PRIMARY_API_URL, '/api'];
 }
 
 const LOCAL_STORAGE_KEY = 'blogverse_user_blogs';

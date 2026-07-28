@@ -4,8 +4,10 @@ function getBaseUrl() {
     if (host === 'localhost' || host === '127.0.0.1') {
       return (process.env.NEXT_PUBLIC_API_URL || 'http://localhost:5000/api').replace(/\/+$/, '');
     }
+    const origin = window.location.origin.replace(/\/+$/, '');
+    return `${origin}/api`;
   }
-  return (process.env.NEXT_PUBLIC_API_URL || 'https://blog-website-rccc.vercel.app/api').replace(/\/+$/, '');
+  return (process.env.NEXT_PUBLIC_API_URL || '/api').replace(/\/+$/, '');
 }
 
 const BASE_URL = getBaseUrl();

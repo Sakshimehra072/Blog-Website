@@ -6,7 +6,7 @@ function getSocketUrl() {
     if (host === 'localhost' || host === '127.0.0.1') {
       return (process.env.NEXT_PUBLIC_SOCKET_URL || 'http://localhost:5000').replace(/\/+$/, '');
     }
-    return (process.env.NEXT_PUBLIC_SOCKET_URL || 'https://blog-website-rccc.vercel.app').replace(/\/+$/, '');
+    return window.location.origin.replace(/\/+$/, '');
   }
   return process.env.NEXT_PUBLIC_SOCKET_URL || 'http://localhost:5000';
 }
