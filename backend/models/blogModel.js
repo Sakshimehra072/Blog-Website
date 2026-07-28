@@ -106,27 +106,41 @@ async function getBlogsFromDb({ category = null, page = 1, limit = 100 }) {
       totalBlogs = Number(countRows[0].total);
     }
 
-    let query = `
-      SELECT b.*, 
-             (SELECT COUNT(*) FROM comments WHERE blog_id = b.id) as real_comments_count,
-             (SELECT COUNT(*) FROM likes WHERE blog_id = b.id) as real_likes_count,
-             u.name as live_author_name, 
-             u.avatar_url as live_author_avatar 
-      FROM blogs b 
-      LEFT JOIN users u ON b.author_id = u.id
-    `;
-    const params = [];
+    try {
+      let query = `
+        SELECT b.*, 
+               (SELECT COUNT(*) FROM comments WHERE blog_id = b.id) as real_comments_count,
+               (SELECT COUNT(*) FROM likes WHERE blog_id = b.id) as real_likes_count,
+               u.name as live_author_name, 
+               u.avatar_url as live_author_avatar 
+        FROM blogs b 
+        LEFT JOIN users u ON b.author_id = u.id
+      `;
+      const params = [];
 
-    if (category && category.trim() && category !== 'All') {
-      query += ` WHERE LOWER(b.category) = LOWER(?)`;
-      params.push(category.trim());
-    }
+      if (category && category.trim() && category !== 'All') {
+        query += ` WHERE LOWER(b.category) = LOWER(?)`;
+        params.push(category.trim());
+      }
 
-    query += ` ORDER BY b.created_at DESC LIMIT ${limitNum} OFFSET ${offset}`;
+      query += ` ORDER BY b.created_at DESC LIMIT ${limitNum} OFFSET ${offset}`;
 
-    const [rows] = await pool.query(query, params);
-    if (Array.isArray(rows)) {
-      blogs = rows.map(r => formatBlogResponse(r));
+      const [rows] = await pool.query(query, params);
+      if (Array.isArray(rows)) {
+        blogs = rows.map(r => formatBlogResponse(r));
+      }
+    } catch (subErr) {
+      let fallbackQuery = `SELECT * FROM blogs`;
+      const fallbackParams = [];
+      if (category && category.trim() && category !== 'All') {
+        fallbackQuery += ` WHERE LOWER(category) = LOWER(?)`;
+        fallbackParams.push(category.trim());
+      }
+      fallbackQuery += ` ORDER BY created_at DESC LIMIT ${limitNum} OFFSET ${offset}`;
+      const [rows] = await pool.query(fallbackQuery, fallbackParams);
+      if (Array.isArray(rows)) {
+        blogs = rows.map(r => formatBlogResponse(r));
+      }
     }
   } catch (err) {}
 
