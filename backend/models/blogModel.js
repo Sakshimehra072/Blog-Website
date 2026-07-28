@@ -31,56 +31,51 @@ function writePersistentBlogs(blogs) {
 const memoryBlogsFallback = [];
 const inMemoryLikes = [];
 
-// 1. Create a new blog post for real registered user (INSERT database row & save to persistent store)
+// 1. Create a new blog post directly in MySQL
 async function createBlogInDb({ title, category, coverImage, description, authorId, authorName, authorAvatar, readTime }) {
+  if (!title || !category || !description) {
+    throw new Error('Title, category, and description are required.');
+  }
+
   const cleanReadTime = readTime || '5 min read';
   const cleanCoverImage = coverImage || 'https://images.unsplash.com/photo-1499750310107-5fef28a66643?w=800&auto=format&fit=crop&q=80';
+  const cleanAuthorName = authorName || 'Registered Author';
 
-  const newBlog = {
-    title,
-    category,
+  const [result] = await pool.query(
+    `INSERT INTO blogs (title, category, cover_image, description, author_id, author_name, author_avatar, read_time, created_at)
+     VALUES (?, ?, ?, ?, ?, ?, ?, ?, NOW())`,
+    [
+      title.trim(),
+      category.trim(),
+      cleanCoverImage,
+      description.trim(),
+      authorId || null,
+      cleanAuthorName,
+      authorAvatar || null,
+      cleanReadTime
+    ]
+  );
+
+  const insertedId = result.insertId;
+
+  // Fetch inserted row from database to ensure exact schema response
+  const [rows] = await pool.query('SELECT * FROM blogs WHERE id = ?', [insertedId]);
+  if (rows && rows.length > 0) {
+    return formatBlogResponse(rows[0]);
+  }
+
+  return formatBlogResponse({
+    id: insertedId,
+    title: title.trim(),
+    category: category.trim(),
     cover_image: cleanCoverImage,
-    description,
+    description: description.trim(),
     author_id: authorId || null,
-    author_name: authorName || 'Registered Author',
+    author_name: cleanAuthorName,
     author_avatar: authorAvatar || null,
     read_time: cleanReadTime,
-    likes_count: 0,
-    comments_count: 0,
     created_at: new Date().toISOString()
-  };
-
-  try {
-    const [result] = await pool.query(
-      `INSERT INTO blogs (title, category, cover_image, description, author_id, author_name, author_avatar, read_time, created_at)
-       VALUES (?, ?, ?, ?, ?, ?, ?, ?, NOW())`,
-      [
-        newBlog.title,
-        newBlog.category,
-        newBlog.cover_image,
-        newBlog.description,
-        newBlog.author_id,
-        newBlog.author_name,
-        newBlog.author_avatar,
-        newBlog.read_time
-      ]
-    );
-    newBlog.id = result.insertId;
-  } catch (err) {
-    newBlog.id = Date.now();
-  }
-
-  // Save to persistent file storage safely
-  const currentList = readPersistentBlogs();
-  if (!currentList.some(b => String(b.id) === String(newBlog.id))) {
-    currentList.unshift(newBlog);
-    writePersistentBlogs(currentList);
-  }
-  if (!memoryBlogsFallback.some(b => String(b.id) === String(newBlog.id))) {
-    memoryBlogsFallback.unshift(newBlog);
-  }
-
-  return formatBlogResponse(newBlog);
+  });
 }
 
 // 2. Fetch ALL blogs published by real users (Sorted by createdAt DESC)

@@ -212,9 +212,10 @@ export async function fetchBlogByIdApi(id) {
   return { success: false, message: 'Article not found.' };
 }
 
-// Publish new blog to the backend API database with dual-endpoint attempt + client local storage backup
+// Publish new blog to the backend API database
 export async function createBlogApi(blogData) {
   let createdBlog = null;
+  let serverMessage = '';
   const tryEndpoints = getTryEndpoints();
 
   for (const baseUrl of tryEndpoints) {
@@ -227,38 +228,28 @@ export async function createBlogApi(blogData) {
       const data = await parseJsonResponse(res);
       if (data && (data.success || data.blog)) {
         createdBlog = data.blog || data.data;
+        serverMessage = data.message || '🎉 Article published successfully!';
         break;
+      } else if (data && data.message) {
+        serverMessage = data.message;
       }
-    } catch (err) { }
+    } catch (err) {
+      console.error('API createBlogApi error:', err);
+    }
   }
 
-  // Fallback payload if server responded without blog object
-  if (!createdBlog) {
-    createdBlog = {
-      id: Date.now(),
-      title: blogData.title,
-      category: blogData.category,
-      coverImage: blogData.coverImage,
-      description: blogData.description,
-      excerpt: blogData.description ? (blogData.description.slice(0, 140) + '...') : '',
-      author: {
-        name: blogData.authorName || 'Registered Author',
-        avatar: blogData.authorAvatar || null
-      },
-      readTime: '5 min read',
-      likes: 0,
-      comments: 0,
-      createdAt: new Date().toISOString()
+  if (createdBlog) {
+    saveLocalStorageBlog(createdBlog);
+    return {
+      success: true,
+      message: serverMessage || '🎉 Article published successfully!',
+      blog: createdBlog
     };
   }
 
-  // Save to client localStorage to guarantee instant visibility across reloads
-  const savedLocal = saveLocalStorageBlog(createdBlog) || createdBlog;
-
   return {
-    success: true,
-    message: '🎉 Article published successfully!',
-    blog: savedLocal
+    success: false,
+    message: serverMessage || 'Failed to save blog to database. Please check your connection and try again.'
   };
 }
 
