@@ -3,7 +3,7 @@ import {
   getBlogByIdFromDb, 
   deleteBlogFromDb, 
   updateBlogInDb 
-} from '../../../../../../backend/models/blogModel';
+} from '../../../../lib/blogModel';
 
 export async function GET(request, { params }) {
   const { id } = params;

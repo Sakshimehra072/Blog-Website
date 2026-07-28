@@ -3,7 +3,7 @@ import {
   createBlogInDb, 
   getBlogsFromDb, 
   getCategoryCountsFromDb 
-} from '../../../../../backend/models/blogModel';
+} from '../../../lib/blogModel';
 
 export async function GET(request) {
   try {
