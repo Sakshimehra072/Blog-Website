@@ -12,23 +12,28 @@ export async function GET(request) {
     const page = searchParams.get('page') || 1;
     const limit = searchParams.get('limit') || 100;
 
-    const blogs = await getBlogsFromDb({ category, page, limit });
+    const { blogs, totalBlogs, currentPage, totalPages } = await getBlogsFromDb({ category, page, limit });
     const categoryCounts = await getCategoryCountsFromDb();
 
     return NextResponse.json({
       success: true,
+      blogs,
       data: blogs,
-      categoryCounts,
-      page: parseInt(page),
-      limit: parseInt(limit),
-      count: blogs.length
+      totalBlogs,
+      currentPage,
+      totalPages,
+      categoryCounts
     });
   } catch (err) {
     console.error('API GET /api/blogs error:', err);
     return NextResponse.json({
       success: false,
       message: 'Failed to fetch blogs.',
-      data: []
+      blogs: [],
+      data: [],
+      totalBlogs: 0,
+      currentPage: 1,
+      totalPages: 1
     }, { status: 500 });
   }
 }

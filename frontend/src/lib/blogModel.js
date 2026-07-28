@@ -67,13 +67,30 @@ export async function createBlogInDb({ title, category, coverImage, description,
   return formatBlogResponse(newBlog);
 }
 
-// 2. Fetch ALL blogs
+// 2. Fetch ALL blogs with pagination metadata
 export async function getBlogsFromDb({ category = null, page = 1, limit = 100 }) {
   const pageNum = Math.max(1, parseInt(page) || 1);
   const limitNum = Math.max(1, parseInt(limit) || 100);
   const offset = (pageNum - 1) * limitNum;
 
+  let totalBlogs = 0;
+  let blogs = [];
+
   try {
+    // Total count query
+    let countQuery = `SELECT COUNT(*) as total FROM blogs`;
+    const countParams = [];
+    if (category && category.trim() && category !== 'All') {
+      countQuery += ` WHERE LOWER(category) = LOWER(?)`;
+      countParams.push(category.trim());
+    }
+
+    const [countRows] = await pool.query(countQuery, countParams);
+    if (countRows && countRows.length > 0) {
+      totalBlogs = Number(countRows[0].total);
+    }
+
+    // Main fetch query
     let query = `
       SELECT b.*, 
              (SELECT COUNT(*) FROM comments WHERE blog_id = b.id) as real_comments_count,
@@ -94,13 +111,20 @@ export async function getBlogsFromDb({ category = null, page = 1, limit = 100 })
 
     const [rows] = await pool.query(query, params);
     if (Array.isArray(rows)) {
-      return rows.map(r => formatBlogResponse(r));
+      blogs = rows.map(r => formatBlogResponse(r));
     }
   } catch (err) {
     console.error('MySQL Fetch Blogs Error:', err);
   }
 
-  return [];
+  const totalPages = Math.ceil(totalBlogs / limitNum) || 1;
+
+  return {
+    blogs,
+    totalBlogs,
+    currentPage: pageNum,
+    totalPages
+  };
 }
 
 // 3. Fetch single blog by ID

@@ -11,20 +11,29 @@ const {
 async function getBlogs(req, res) {
   try {
     const { category, page = 1, limit = 100 } = req.query;
-    const blogs = await getBlogsFromDb({ category, page, limit });
+    const { blogs, totalBlogs, currentPage, totalPages } = await getBlogsFromDb({ category, page, limit });
     const categoryCounts = await getCategoryCountsFromDb();
     
     res.json({
       success: true,
+      blogs,
       data: blogs,
-      categoryCounts,
-      page: parseInt(page),
-      limit: parseInt(limit),
-      count: blogs.length
+      totalBlogs,
+      currentPage,
+      totalPages,
+      categoryCounts
     });
   } catch (error) {
     console.error('Get Blogs Error:', error);
-    res.status(500).json({ success: false, message: 'Failed to fetch blogs.' });
+    res.status(500).json({
+      success: false,
+      message: 'Failed to fetch blogs.',
+      blogs: [],
+      data: [],
+      totalBlogs: 0,
+      currentPage: 1,
+      totalPages: 1
+    });
   }
 }
 

@@ -118,11 +118,14 @@ export async function fetchBlogsApi(category = null, page = 1, limit = 100) {
       const res = await fetch(url);
       const data = await parseJsonResponse(res);
 
-      if (data && data.success && Array.isArray(data.data)) {
-        serverBlogs = data.data;
-        categoryCounts = data.categoryCounts || null;
-        serverResponded = true;
-        break;
+      if (data && data.success) {
+        const rawBlogs = data.blogs || data.data;
+        if (Array.isArray(rawBlogs)) {
+          serverBlogs = rawBlogs;
+          categoryCounts = data.categoryCounts || null;
+          serverResponded = true;
+          break;
+        }
       } else if (Array.isArray(data)) {
         serverBlogs = data;
         serverResponded = true;
@@ -167,7 +170,9 @@ export async function fetchBlogsApi(category = null, page = 1, limit = 100) {
 
   return {
     success: true,
+    blogs: combined,
     data: combined,
+    totalBlogs: combined.length,
     categoryCounts
   };
 }

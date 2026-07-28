@@ -89,7 +89,23 @@ async function getBlogsFromDb({ category = null, page = 1, limit = 100 }) {
   const limitNum = Math.max(1, parseInt(limit) || 100);
   const offset = (pageNum - 1) * limitNum;
 
+  let totalBlogs = 0;
+  let blogs = [];
+
   try {
+    // Total count query
+    let countQuery = `SELECT COUNT(*) as total FROM blogs`;
+    const countParams = [];
+    if (category && category.trim() && category !== 'All') {
+      countQuery += ` WHERE LOWER(category) = LOWER(?)`;
+      countParams.push(category.trim());
+    }
+
+    const [countRows] = await pool.query(countQuery, countParams);
+    if (countRows && countRows.length > 0) {
+      totalBlogs = Number(countRows[0].total);
+    }
+
     let query = `
       SELECT b.*, 
              (SELECT COUNT(*) FROM comments WHERE blog_id = b.id) as real_comments_count,
@@ -109,31 +125,41 @@ async function getBlogsFromDb({ category = null, page = 1, limit = 100 }) {
     query += ` ORDER BY b.created_at DESC LIMIT ${limitNum} OFFSET ${offset}`;
 
     const [rows] = await pool.query(query, params);
-    if (Array.isArray(rows) && rows.length > 0) {
-      return rows.map(r => formatBlogResponse(r));
+    if (Array.isArray(rows)) {
+      blogs = rows.map(r => formatBlogResponse(r));
     }
   } catch (err) {}
 
-  // Fallback to persistent file & memory fallback
-  let allBlogsMap = new Map();
-  const fileBlogs = readPersistentBlogs();
-  fileBlogs.forEach(b => {
-    allBlogsMap.set(String(b.id), formatBlogResponse(b));
-  });
-  memoryBlogsFallback.forEach(b => {
-    allBlogsMap.set(String(b.id), formatBlogResponse(b));
-  });
+  if (blogs.length === 0) {
+    // Fallback to persistent file & memory fallback
+    let allBlogsMap = new Map();
+    const fileBlogs = readPersistentBlogs();
+    fileBlogs.forEach(b => {
+      allBlogsMap.set(String(b.id), formatBlogResponse(b));
+    });
+    memoryBlogsFallback.forEach(b => {
+      allBlogsMap.set(String(b.id), formatBlogResponse(b));
+    });
 
-  let combined = Array.from(allBlogsMap.values());
+    let combined = Array.from(allBlogsMap.values());
 
-  if (category && category.trim() && category !== 'All') {
-    combined = combined.filter(b => b.category && b.category.toLowerCase() === category.trim().toLowerCase());
+    if (category && category.trim() && category !== 'All') {
+      combined = combined.filter(b => b.category && b.category.toLowerCase() === category.trim().toLowerCase());
+    }
+
+    combined.sort((a, b) => new Date(b.createdAt || b.created_at) - new Date(a.createdAt || a.created_at));
+    totalBlogs = Math.max(totalBlogs, combined.length);
+    blogs = combined.slice(offset, offset + limitNum);
   }
 
-  combined.sort((a, b) => new Date(b.createdAt || b.created_at) - new Date(a.createdAt || a.created_at));
+  const totalPages = Math.ceil(totalBlogs / limitNum) || 1;
 
-  const sliced = combined.slice(offset, offset + limitNum);
-  return sliced;
+  return {
+    blogs,
+    totalBlogs,
+    currentPage: pageNum,
+    totalPages
+  };
 }
 
 // 3. Fetch single blog by ID
