@@ -1,4 +1,5 @@
 import { io } from 'socket.io-client';
+import { getSocketBaseUrl } from '../utils/apiUrl';
 
 const dummySocket = {
   on: () => {},
@@ -12,9 +13,7 @@ let socket = null;
 
 export function getSocket() {
   if (typeof window !== 'undefined') {
-    const host = window.location.hostname;
-    const isLocal = host === 'localhost' || host === '127.0.0.1';
-    const socketUrl = process.env.NEXT_PUBLIC_SOCKET_URL || (isLocal ? 'http://localhost:5000' : null);
+    const socketUrl = getSocketBaseUrl();
 
     if (!socketUrl) {
       return dummySocket;

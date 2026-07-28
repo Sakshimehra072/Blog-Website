@@ -1,22 +1,9 @@
+import { getApiBaseUrl } from '../utils/apiUrl';
+
 const LOCAL_HOST_API = 'http://localhost:5000/api';
-const HOSTED_VERCEL_API = 'https://blog-website-rccc.vercel.app/api';
+const HOSTED_VERCEL_API = 'https://blog-website-liard-alpha.vercel.app/api';
 
-function getPrimaryApiUrl() {
-  if (typeof window !== 'undefined') {
-    const host = window.location.hostname;
-    if (host === 'localhost' || host === '127.0.0.1') {
-      return LOCAL_HOST_API;
-    }
-  }
-  if (process.env.NEXT_PUBLIC_API_URL) {
-    let clean = process.env.NEXT_PUBLIC_API_URL.replace(/^\/+/, '').replace(/\/+$/, '');
-    if (!clean.endsWith('/api')) clean = `${clean}/api`;
-    return clean.startsWith('http') ? clean : `https://${clean}`;
-  }
-  return HOSTED_VERCEL_API;
-}
-
-const PRIMARY_API_URL = getPrimaryApiUrl();
+const PRIMARY_API_URL = getApiBaseUrl();
 
 function getFallbackApiUrl() {
   return PRIMARY_API_URL.includes('localhost') ? HOSTED_VERCEL_API : LOCAL_HOST_API;

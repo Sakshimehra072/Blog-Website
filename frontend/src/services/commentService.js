@@ -1,16 +1,6 @@
-function getCommentBaseUrl() {
-  if (typeof window !== 'undefined') {
-    const host = window.location.hostname;
-    if (host === 'localhost' || host === '127.0.0.1') {
-      return 'http://localhost:5000/api';
-    }
-    const origin = window.location.origin.replace(/\/+$/, '');
-    return `${origin}/api`;
-  }
-  return 'http://localhost:5000/api';
-}
-const BASE_URL = getCommentBaseUrl().endsWith('/api') ? getCommentBaseUrl() : `${getCommentBaseUrl()}/api`;
+import { getApiBaseUrl } from '../utils/apiUrl';
 
+const BASE_URL = getApiBaseUrl();
 const API_COMMENTS_URL = `${BASE_URL}/comments`;
 
 async function parseJsonResponse(res) {

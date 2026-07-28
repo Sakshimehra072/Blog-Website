@@ -3,12 +3,15 @@ const dotenv = require('dotenv');
 
 dotenv.config();
 
+const isCloudDb = process.env.DB_HOST && !process.env.DB_HOST.includes('localhost') && !process.env.DB_HOST.includes('127.0.0.1');
+
 const pool = mysql.createPool({
   host: process.env.DB_HOST || 'localhost',
   user: process.env.DB_USER || 'root',
-  password: process.env.DB_PASSWORD || '',
+  password: process.env.DB_PASSWORD !== undefined ? process.env.DB_PASSWORD : 'Sakshi@sql123',
   database: process.env.DB_NAME || 'blogverse_db',
   port: parseInt(process.env.DB_PORT || '3306'),
+  ssl: isCloudDb ? { rejectUnauthorized: false } : undefined,
   waitForConnections: true,
   connectionLimit: 10,
   queueLimit: 0
@@ -18,7 +21,7 @@ async function testConnection() {
   try {
     const connection = await pool.getConnection();
     console.log('✅ MySQL Database connected successfully.');
-    
+
     // Auto-create blogs table if not existing
     await connection.query(`
       CREATE TABLE IF NOT EXISTS blogs (

@@ -1,16 +1,6 @@
-function getBaseUrl() {
-  if (typeof window !== 'undefined') {
-    const host = window.location.hostname;
-    if (host === 'localhost' || host === '127.0.0.1') {
-      return 'http://localhost:5000/api';
-    }
-    const origin = window.location.origin.replace(/\/+$/, '');
-    return `${origin}/api`;
-  }
-  return 'http://localhost:5000/api';
-}
+import { getApiBaseUrl } from '../utils/apiUrl';
 
-const BASE_URL = getBaseUrl();
+const BASE_URL = getApiBaseUrl();
 const API_AUTH_URL = `${BASE_URL}/auth`;
 
 // Local user persistence helper for serverless/offline fallback
