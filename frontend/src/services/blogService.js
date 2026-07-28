@@ -5,9 +5,7 @@ function getPrimaryApiUrl() {
   if (typeof window !== 'undefined') {
     const host = window.location.hostname;
     if (host === 'localhost' || host === '127.0.0.1') {
-      return (process.env.NEXT_PUBLIC_API_URL || LOCAL_HOST_API).replace(/\/+$/, '').endsWith('/api')
-        ? (process.env.NEXT_PUBLIC_API_URL || LOCAL_HOST_API).replace(/\/+$/, '')
-        : `${(process.env.NEXT_PUBLIC_API_URL || LOCAL_HOST_API).replace(/\/+$/, '')}/api`;
+      return LOCAL_HOST_API;
     }
   }
   if (process.env.NEXT_PUBLIC_API_URL) {

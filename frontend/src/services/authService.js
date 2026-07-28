@@ -2,12 +2,12 @@ function getBaseUrl() {
   if (typeof window !== 'undefined') {
     const host = window.location.hostname;
     if (host === 'localhost' || host === '127.0.0.1') {
-      return (process.env.NEXT_PUBLIC_API_URL || 'http://localhost:5000/api').replace(/\/+$/, '');
+      return 'http://localhost:5000/api';
     }
     const origin = window.location.origin.replace(/\/+$/, '');
     return `${origin}/api`;
   }
-  return (process.env.NEXT_PUBLIC_API_URL || '/api').replace(/\/+$/, '');
+  return 'http://localhost:5000/api';
 }
 
 const BASE_URL = getBaseUrl();

@@ -1,4 +1,5 @@
-require('dotenv').config();
+const path = require('path');
+require('dotenv').config({ path: path.join(__dirname, '../.env') });
 const mysql = require('mysql2/promise');
 
 async function checkDatabase() {
@@ -15,6 +16,8 @@ async function checkDatabase() {
       port: parseInt(process.env.DB_PORT || '3306'),
       ssl: isCloudDb ? { rejectUnauthorized: false } : undefined
     });
+
+    console.log(`📌 Connected DB Host: ${process.env.DB_HOST || 'localhost'} (Database: ${process.env.DB_NAME || 'blogverse_db'})\n`);
 
     // 1. Check Blogs
     console.log('--------------------------------------------------');
