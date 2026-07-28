@@ -58,7 +58,7 @@ export function AuthProvider({ children }) {
     setUser(userData);
     localStorage.setItem('blogverse_token', authToken);
     localStorage.setItem('blogverse_user', JSON.stringify(userData));
-  }; +
+  };
 
   const register = async (name, email, password) => {
     const res = await registerApi(name, email, password);
