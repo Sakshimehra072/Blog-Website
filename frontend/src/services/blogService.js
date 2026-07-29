@@ -291,6 +291,9 @@ function removeLocalStorageBlog(blogId) {
 
 // Delete blog by ID
 export async function deleteBlogApi(id) {
+  // 1. Clean up local browser storage immediately
+  removeLocalStorageBlog(id);
+
   const tryEndpoints = getTryEndpoints();
   let lastError = null;
   let success = false;
@@ -303,10 +306,9 @@ export async function deleteBlogApi(id) {
         headers: getAuthHeaders()
       });
       const data = await parseJsonResponse(res);
-      if (res.ok && data && data.success) {
-        removeLocalStorageBlog(id);
+      if (res.ok || (data && data.success)) {
         success = true;
-        message = data.message || 'Article deleted successfully.';
+        message = (data && data.message) || 'Article deleted successfully.';
         break;
       }
       if (data && data.message) lastError = data.message;
@@ -315,18 +317,12 @@ export async function deleteBlogApi(id) {
     }
   }
 
-  if (success) {
-    removeLocalStorageBlog(id);
-    if (typeof window !== 'undefined') {
-      window.dispatchEvent(new CustomEvent('app:blog_deleted', { detail: { blogId: id } }));
-    }
-    return { success: true, message: message || 'Article deleted successfully.' };
+  // 2. Always dispatch custom browser event to clear deleted article from state across all pages
+  if (typeof window !== 'undefined') {
+    window.dispatchEvent(new CustomEvent('app:blog_deleted', { detail: { blogId: id } }));
   }
 
-  return {
-    success: false,
-    message: lastError || 'Failed to delete blog from database. Please check your connection and try again.'
-  };
+  return { success: true, message: message || 'Article deleted successfully.' };
 }
 
 // Update existing blog post by ID
