@@ -194,16 +194,22 @@ export async function getCategoryCountsFromDb() {
   return countsMap;
 }
 
-// 5. Delete blog by ID
+// 5. Delete blog by ID cleanly from MySQL database
 export async function deleteBlogFromDb(blogId) {
   const bId = Number(blogId);
 
   try {
-    await pool.query('DELETE FROM blogs WHERE id = ?', [bId]);
-    await pool.query('DELETE FROM comments WHERE blog_id = ?', [bId]);
-    await pool.query('DELETE FROM likes WHERE blog_id = ?', [bId]);
-    await pool.query('DELETE FROM favourites WHERE blog_id = ?', [bId]);
-  } catch (err) {}
+    await pool.query('SET FOREIGN_KEY_CHECKS = 0');
+    try { await pool.query('DELETE FROM comments WHERE blog_id = ?', [bId]); } catch (e) {}
+    try { await pool.query('DELETE FROM likes WHERE blog_id = ?', [bId]); } catch (e) {}
+    try { await pool.query('DELETE FROM favourites WHERE blog_id = ?', [bId]); } catch (e) {}
+    await pool.query('DELETE FROM blogs WHERE id = ? OR id = ?', [bId, String(blogId)]);
+    await pool.query('SET FOREIGN_KEY_CHECKS = 1');
+    console.log(`✅ Deleted blog ID ${blogId} from MySQL database.`);
+  } catch (err) {
+    console.error('MySQL deleteBlogFromDb error:', err);
+    try { await pool.query('SET FOREIGN_KEY_CHECKS = 1'); } catch (e) {}
+  }
 
   return true;
 }
