@@ -1,3 +1,4 @@
+
 import pool from './db';
 
 // Helper to format consistent Blog JSON payload
@@ -174,7 +175,7 @@ export async function getBlogByIdFromDb(blogId) {
     if (rows.length > 0) {
       return formatBlogResponse(rows[0]);
     }
-  } catch (err) {}
+  } catch (err) { }
 
   return null;
 }
@@ -193,7 +194,7 @@ export async function getCategoryCountsFromDb() {
         countsMap[r.category] = Number(r.count);
       }
     });
-  } catch (err) {}
+  } catch (err) { }
 
   return countsMap;
 }
@@ -207,7 +208,7 @@ export async function deleteBlogFromDb(blogId) {
     await pool.query('DELETE FROM comments WHERE blog_id = ?', [bId]);
     await pool.query('DELETE FROM likes WHERE blog_id = ?', [bId]);
     await pool.query('DELETE FROM favourites WHERE blog_id = ?', [bId]);
-  } catch (err) {}
+  } catch (err) { }
 
   return true;
 }
@@ -223,7 +224,7 @@ export async function updateBlogInDb(blogId, { title, category, coverImage, desc
        WHERE id = ?`,
       [title, category, coverImage, description, bId]
     );
-  } catch (err) {}
+  } catch (err) { }
 
   return await getBlogByIdFromDb(blogId);
 }
