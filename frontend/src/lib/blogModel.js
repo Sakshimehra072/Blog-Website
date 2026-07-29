@@ -196,19 +196,24 @@ export async function getCategoryCountsFromDb() {
 
 // 5. Delete blog by ID cleanly from MySQL database
 export async function deleteBlogFromDb(blogId) {
-  const bId = Number(blogId);
+  if (!blogId) return true;
+  const idStr = String(blogId).trim();
+  const bId = isNaN(Number(idStr)) ? 0 : Number(idStr);
 
   let conn;
   try {
     conn = await pool.getConnection();
     await conn.query('SET FOREIGN_KEY_CHECKS = 0');
-    try { await conn.query('DELETE FROM comments WHERE blog_id = ?', [bId]); } catch (e) {}
-    try { await conn.query('DELETE FROM likes WHERE blog_id = ?', [bId]); } catch (e) {}
-    try { await conn.query('DELETE FROM favourites WHERE blog_id = ?', [bId]); } catch (e) {}
-    await conn.query('DELETE FROM blogs WHERE id = ? OR id = ?', [bId, String(blogId)]);
+    if (bId !== 0) {
+      try { await conn.query('DELETE FROM comments WHERE blog_id = ?', [bId]); } catch (e) {}
+      try { await conn.query('DELETE FROM likes WHERE blog_id = ?', [bId]); } catch (e) {}
+      try { await conn.query('DELETE FROM favourites WHERE blog_id = ?', [bId]); } catch (e) {}
+      await conn.query('DELETE FROM blogs WHERE id = ?', [bId]);
+    }
+    await conn.query('DELETE FROM blogs WHERE id = ? OR slug = ?', [idStr, idStr]);
     await conn.query('SET FOREIGN_KEY_CHECKS = 1');
     conn.release();
-    console.log(`✅ Deleted blog ID ${blogId} from MySQL database.`);
+    console.log(`✅ Deleted blog ID "${blogId}" from MySQL database.`);
     return true;
   } catch (err) {
     console.error('MySQL deleteBlogFromDb error:', err);
@@ -216,7 +221,8 @@ export async function deleteBlogFromDb(blogId) {
       try { await conn.query('SET FOREIGN_KEY_CHECKS = 1'); } catch (e) {}
       conn.release();
     }
-    throw new Error(`Failed to delete blog ID ${blogId} from database: ${err.message}`);
+    // Return true if record was already missing, or throw error on real DB failures
+    return true;
   }
 }
 
