@@ -146,17 +146,27 @@ async function uploadImageController(req, res) {
 async function deleteBlogController(req, res) {
   try {
     const { id } = req.params;
-    await deleteBlogFromDb(id);
+    const result = await deleteBlogFromDb(id);
 
-    // Real-Time Socket.IO Event Broadcast
-    if (req.io) {
-      req.io.emit('blog:deleted', { blogId: id });
+    if (result && result.success && result.affectedRows > 0) {
+      if (req.io) {
+        req.io.emit('blog:deleted', { blogId: id });
+      }
+      return res.json({ 
+        success: true, 
+        message: 'Article deleted successfully.', 
+        affectedRows: result.affectedRows 
+      });
     }
 
-    res.json({ success: true, message: 'Article deleted successfully.' });
+    return res.status(404).json({ 
+      success: false, 
+      message: (result && result.message) || 'Article not found in database or already deleted.', 
+      affectedRows: 0 
+    });
   } catch (error) {
     console.error('Delete Blog Error:', error);
-    res.status(500).json({ success: false, message: 'Failed to delete article.' });
+    res.status(500).json({ success: false, message: 'Failed to delete article from database.' });
   }
 }
 

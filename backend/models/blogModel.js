@@ -308,25 +308,36 @@ async function getCategoryCountsFromDb() {
 
 // Delete a blog post by ID
 async function deleteBlogFromDb(blogId) {
-  if (!blogId) return true;
+  if (!blogId) {
+    return { success: false, affectedRows: 0, message: 'Invalid blog ID parameter.' };
+  }
+
   const idStr = String(blogId).trim();
   const bId = isNaN(Number(idStr)) ? 0 : Number(idStr);
 
   // 1. Delete from MySQL Database if connected
   let conn;
+  let affectedRows = 0;
   try {
     conn = await pool.getConnection();
     await conn.query('SET FOREIGN_KEY_CHECKS = 0');
+
     if (bId !== 0) {
       try { await conn.query('DELETE FROM comments WHERE blog_id = ?', [bId]); } catch (e) {}
       try { await conn.query('DELETE FROM likes WHERE blog_id = ?', [bId]); } catch (e) {}
       try { await conn.query('DELETE FROM favourites WHERE blog_id = ?', [bId]); } catch (e) {}
-      await conn.query('DELETE FROM blogs WHERE id = ?', [bId]);
     }
-    await conn.query('DELETE FROM blogs WHERE id = ? OR slug = ?', [idStr, idStr]);
+
+    const [result] = await conn.query(
+      'DELETE FROM blogs WHERE id = ? OR (id = ? AND ? != 0) OR slug = ?',
+      [idStr, bId, bId, idStr]
+    );
+
     await conn.query('SET FOREIGN_KEY_CHECKS = 1');
     conn.release();
-    console.log(`✅ Deleted blog ID "${blogId}" from MySQL database.`);
+
+    affectedRows = result ? result.affectedRows : 0;
+    console.log(`🗑 Backend MySQL DB DELETE result for blog ID "${blogId}": affectedRows = ${affectedRows}`);
   } catch (err) {
     console.error('Backend MySQL deleteBlogFromDb error:', err);
     if (conn) {
@@ -338,17 +349,21 @@ async function deleteBlogFromDb(blogId) {
   // 2. Delete from persistent JSON file storage
   try {
     const currentList = readPersistentBlogs();
-    const filtered = currentList.filter(b => Number(b.id) !== bId && String(b.id) !== String(blogId));
+    const filtered = currentList.filter(b => Number(b.id) !== bId && String(b.id) !== idStr);
     writePersistentBlogs(filtered);
   } catch (err) {}
 
   // 3. Delete from memory fallback list
-  const memIndex = memoryBlogsFallback.findIndex(b => Number(b.id) === bId || String(b.id) === String(blogId));
+  const memIndex = memoryBlogsFallback.findIndex(b => Number(b.id) === bId || String(b.id) === idStr);
   if (memIndex !== -1) {
     memoryBlogsFallback.splice(memIndex, 1);
   }
 
-  return true;
+  return {
+    success: affectedRows > 0,
+    affectedRows,
+    message: affectedRows > 0 ? 'Article deleted successfully.' : 'Article not found.'
+  };
 }
 
 // Update an existing blog post

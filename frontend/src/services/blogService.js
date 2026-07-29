@@ -15,9 +15,9 @@ function getTryEndpoints() {
     if (host === 'localhost' || host === '127.0.0.1') {
       return ['/api', LOCAL_HOST_API];
     }
-    return ['/api'];
+    return ['/api', PRIMARY_API_URL];
   }
-  return [PRIMARY_API_URL, '/api'];
+  return ['/api', PRIMARY_API_URL];
 }
 
 const LOCAL_STORAGE_KEY = 'blogverse_user_blogs';
@@ -291,24 +291,26 @@ function removeLocalStorageBlog(blogId) {
 
 // Delete blog by ID
 export async function deleteBlogApi(id) {
-  // 1. Clean up local browser storage immediately
-  removeLocalStorageBlog(id);
-
   const tryEndpoints = getTryEndpoints();
   let lastError = null;
   let success = false;
   let message = '';
+  let affectedRows = 0;
 
   for (const baseUrl of tryEndpoints) {
     try {
       const res = await fetch(`${baseUrl}/blogs/${id}`, {
         method: 'DELETE',
-        headers: getAuthHeaders()
+        headers: getAuthHeaders(),
+        cache: 'no-store'
       });
       const data = await parseJsonResponse(res);
-      if (res.ok || (data && data.success)) {
+
+      if (res.ok && data && data.success && data.affectedRows > 0) {
+        removeLocalStorageBlog(id);
         success = true;
-        message = (data && data.message) || 'Article deleted successfully.';
+        message = data.message || 'Article deleted successfully.';
+        affectedRows = data.affectedRows;
         break;
       }
       if (data && data.message) lastError = data.message;
@@ -317,12 +319,19 @@ export async function deleteBlogApi(id) {
     }
   }
 
-  // 2. Always dispatch custom browser event to clear deleted article from state across all pages
-  if (typeof window !== 'undefined') {
-    window.dispatchEvent(new CustomEvent('app:blog_deleted', { detail: { blogId: id } }));
+  if (success) {
+    removeLocalStorageBlog(id);
+    if (typeof window !== 'undefined') {
+      window.dispatchEvent(new CustomEvent('app:blog_deleted', { detail: { blogId: id } }));
+    }
+    return { success: true, message: message || 'Article deleted successfully.', affectedRows };
   }
 
-  return { success: true, message: message || 'Article deleted successfully.' };
+  return {
+    success: false,
+    message: lastError || 'Failed to delete article from database. No rows affected.',
+    affectedRows: 0
+  };
 }
 
 // Update existing blog post by ID

@@ -196,7 +196,10 @@ export async function getCategoryCountsFromDb() {
 
 // 5. Delete blog by ID cleanly from MySQL database
 export async function deleteBlogFromDb(blogId) {
-  if (!blogId) return true;
+  if (!blogId) {
+    return { success: false, affectedRows: 0, message: 'Invalid blog ID parameter.' };
+  }
+
   const idStr = String(blogId).trim();
   const bId = isNaN(Number(idStr)) ? 0 : Number(idStr);
 
@@ -204,25 +207,36 @@ export async function deleteBlogFromDb(blogId) {
   try {
     conn = await pool.getConnection();
     await conn.query('SET FOREIGN_KEY_CHECKS = 0');
+
     if (bId !== 0) {
       try { await conn.query('DELETE FROM comments WHERE blog_id = ?', [bId]); } catch (e) {}
       try { await conn.query('DELETE FROM likes WHERE blog_id = ?', [bId]); } catch (e) {}
       try { await conn.query('DELETE FROM favourites WHERE blog_id = ?', [bId]); } catch (e) {}
-      await conn.query('DELETE FROM blogs WHERE id = ?', [bId]);
     }
-    await conn.query('DELETE FROM blogs WHERE id = ? OR slug = ?', [idStr, idStr]);
+
+    const [result] = await conn.query(
+      'DELETE FROM blogs WHERE id = ? OR (id = ? AND ? != 0) OR slug = ?',
+      [idStr, bId, bId, idStr]
+    );
+
     await conn.query('SET FOREIGN_KEY_CHECKS = 1');
     conn.release();
-    console.log(`✅ Deleted blog ID "${blogId}" from MySQL database.`);
-    return true;
+
+    const affectedRows = result ? result.affectedRows : 0;
+    console.log(`🗑 MySQL DB DELETE result for blog ID "${blogId}": affectedRows = ${affectedRows}`);
+
+    if (affectedRows > 0) {
+      return { success: true, affectedRows, message: 'Article deleted successfully from database.' };
+    }
+
+    return { success: false, affectedRows: 0, message: `Article with ID "${blogId}" not found in database.` };
   } catch (err) {
     console.error('MySQL deleteBlogFromDb error:', err);
     if (conn) {
       try { await conn.query('SET FOREIGN_KEY_CHECKS = 1'); } catch (e) {}
       conn.release();
     }
-    // Return true if record was already missing, or throw error on real DB failures
-    return true;
+    throw new Error(`Failed to delete blog ID "${blogId}" from database: ${err.message}`);
   }
 }
 

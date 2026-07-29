@@ -27,14 +27,31 @@ export async function DELETE(request, { params }) {
     const id = resolvedParams?.id;
 
     if (!id) {
-      return NextResponse.json({ success: true, message: 'Article deleted successfully.' });
+      return NextResponse.json({ success: false, message: 'Missing article ID parameter.', affectedRows: 0 }, { status: 400 });
     }
 
-    await deleteBlogFromDb(id);
-    return NextResponse.json({ success: true, message: 'Article deleted successfully.' });
+    const result = await deleteBlogFromDb(id);
+
+    if (result && result.success && result.affectedRows > 0) {
+      return NextResponse.json({ 
+        success: true, 
+        message: 'Article deleted successfully from database.',
+        affectedRows: result.affectedRows 
+      }, { status: 200 });
+    } else {
+      return NextResponse.json({ 
+        success: false, 
+        message: (result && result.message) || 'Article not found in database.',
+        affectedRows: 0 
+      }, { status: 404 });
+    }
   } catch (err) {
     console.error('API DELETE /api/blogs/[id] error:', err);
-    return NextResponse.json({ success: true, message: 'Article deleted successfully.' });
+    return NextResponse.json({ 
+      success: false, 
+      message: err.message || 'Failed to delete article from database.',
+      affectedRows: 0 
+    }, { status: 500 });
   }
 }
 
