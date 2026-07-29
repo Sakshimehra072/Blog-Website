@@ -10,27 +10,27 @@ import Modal from '../components/Modal';
 import { useAuth } from '../context/AuthContext';
 import { fetchBlogsApi } from '../services/blogService';
 import { getSocket } from '../services/socketService';
-import { 
-  TrendingUp, 
-  Search, 
+import {
+  TrendingUp,
+  Search,
   ArrowRight,
   PenTool,
   LayoutGrid,
-  Cpu, 
-  Code2, 
-  Bot, 
-  Briefcase, 
-  DollarSign, 
-  Plane, 
-  Activity, 
-  GraduationCap, 
-  Trophy, 
-  Utensils, 
-  Shirt, 
-  Smile, 
-  Film, 
-  Gamepad2, 
-  Atom, 
+  Cpu,
+  Code2,
+  Bot,
+  Briefcase,
+  DollarSign,
+  Plane,
+  Activity,
+  GraduationCap,
+  Trophy,
+  Utensils,
+  Shirt,
+  Smile,
+  Film,
+  Gamepad2,
+  Atom,
   Camera,
   BookOpen,
   SearchX,
@@ -291,14 +291,14 @@ export default function HomePage() {
       )}
 
       <main className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-10 flex-1 w-full space-y-14">
-        
+
         {/* Editorial Hero Banner */}
         <section className="relative overflow-hidden rounded-2xl p-8 sm:p-12 bg-white border border-slate-200/90 shadow-xs">
           <div className="relative z-10 max-w-3xl space-y-4">
             <div className="inline-flex items-center gap-2 px-3 py-1 rounded-md bg-amber-50 border border-amber-200 text-amber-900 text-xs font-semibold">
               Live Real-Time Publishing Platform
             </div>
-            
+
             <h1 className="text-3xl sm:text-5xl font-extrabold tracking-tight text-slate-900 leading-tight">
               Stories, Insights & <span className="text-[#ff9432]">Engineering Essays</span>.
             </h1>
@@ -315,8 +315,8 @@ export default function HomePage() {
               >
                 <PenTool className="w-3.5 h-3.5" /> Write Article
               </button>
-              
-              <a 
+
+              <a
                 href="/blogs"
                 className="px-5 py-2.5 rounded-lg text-xs font-semibold bg-white border border-slate-200 hover:bg-slate-50 text-slate-700 transition-colors flex items-center gap-1.5"
               >
@@ -343,9 +343,9 @@ export default function HomePage() {
                 <TrendingUp className="w-5 h-5 text-[#ff9432]" />
                 {searchQuery ? `Search Results for "${searchQuery}"` : (activeCategory === 'All' ? 'Recent Uploads' : `${activeCategory} Articles`)}
               </h2>
-              <p className="text-xs text-slate-500 font-medium">
+              {/* <p className="text-xs text-slate-500 font-medium">
                 {isMobile ? 'Showing latest 5 posts for mobile' : 'Showing latest 20 posts for desktop'}
-              </p>
+              </p> */}
             </div>
 
             <div className="flex items-center gap-2">
@@ -402,8 +402,8 @@ export default function HomePage() {
               <div className="space-y-1">
                 <h3 className="text-lg font-bold text-slate-900 tracking-tight">Content not available</h3>
                 <p className="text-xs text-slate-500 leading-relaxed font-normal">
-                  {searchQuery 
-                    ? `No articles found matching "${searchQuery}". Please try searching with another keyword or explore all articles.` 
+                  {searchQuery
+                    ? `No articles found matching "${searchQuery}". Please try searching with another keyword or explore all articles.`
                     : (activeCategory !== 'All' ? `No stories found in ${activeCategory}.` : 'Be the first registered author to write and publish an essay!')}
                 </p>
               </div>
@@ -422,9 +422,9 @@ export default function HomePage() {
 
       </main>
 
-      <Modal 
-        isOpen={isAuthModalOpen} 
-        onClose={() => setIsAuthModalOpen(false)} 
+      <Modal
+        isOpen={isAuthModalOpen}
+        onClose={() => setIsAuthModalOpen(false)}
         initialMode={authModalMode}
         message={authModalMessage}
         redirectUrl={authModalRedirect}

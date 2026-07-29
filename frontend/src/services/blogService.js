@@ -168,7 +168,7 @@ export async function fetchBlogByIdApi(id) {
 
   for (const baseUrl of tryEndpoints) {
     try {
-      const res = await fetch(`${baseUrl}/blogs/${id}`);
+      const res = await fetch(`${baseUrl}/blogs/${id}`, { cache: 'no-store' });
       const data = await parseJsonResponse(res);
       if (data && data.success && data.blog) {
         return data;
