@@ -183,8 +183,8 @@ export default function BlogDetailsPage({ params }) {
                 </div>
               )}
               <div>
-                <h4 className="text-sm font-semibold text-slate-900">{authorName}</h4>
-                <p className="text-xs text-slate-500">Registered Author</p>
+                <h4 className="text-sm font-bold text-slate-900">{authorName}</h4>
+                <p className="text-xs text-slate-500 font-medium">Verified Author</p>
               </div>
             </div>
 

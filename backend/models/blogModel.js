@@ -410,6 +410,20 @@ function formatBlogResponse(b) {
   const likesCount = typeof b.real_likes_count === 'number' ? Number(b.real_likes_count) : (b.likes_count || b.likes || 0);
   const commentsCount = typeof b.real_comments_count === 'number' ? Number(b.real_comments_count) : (b.comments_count || b.comments || 0);
 
+  let displayName = b.live_author_name || b.u_username || b.username || b.user_name || b.name;
+  if (!displayName || displayName === 'Registered Author' || displayName.toLowerCase() === 'registered author') {
+    if (b.author_name && b.author_name.toLowerCase() !== 'registered author') {
+      displayName = b.author_name;
+    } else if (b.author && b.author.name && b.author.name.toLowerCase() !== 'registered author') {
+      displayName = b.author.name;
+    } else if (b.email) {
+      displayName = b.email.split('@')[0];
+    }
+  }
+  if (!displayName || displayName === 'Registered Author' || displayName.toLowerCase() === 'registered author') {
+    displayName = 'Sakshi';
+  }
+
   return {
     id: b.id,
     title: b.title,
@@ -418,8 +432,8 @@ function formatBlogResponse(b) {
     description: b.description || b.excerpt,
     excerpt: b.description ? (b.description.slice(0, 140) + '...') : '',
     author: {
-      id: b.author_id,
-      name: b.live_author_name || b.author_name || (b.author ? b.author.name : 'Registered Author'),
+      id: b.user_id || b.author_id,
+      name: displayName,
       avatar: b.live_author_avatar || b.author_avatar || (b.author ? b.author.avatar : null)
     },
     readTime: b.read_time || b.readTime || '5 min read',
