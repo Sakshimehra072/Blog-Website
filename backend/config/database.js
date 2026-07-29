@@ -3,14 +3,28 @@ const dotenv = require('dotenv');
 
 dotenv.config();
 
-const isCloudDb = process.env.DB_HOST && !process.env.DB_HOST.includes('localhost') && !process.env.DB_HOST.includes('127.0.0.1');
+const isVercel = !!(process.env.VERCEL || process.env.NEXT_PUBLIC_VERCEL_ENV || (process.env.NODE_ENV === 'production'));
+
+const defaultHost = isVercel ? 'interchange.proxy.rlwy.net' : 'localhost';
+const defaultPort = isVercel ? 59392 : 3306;
+const defaultUser = 'root';
+const defaultPassword = isVercel ? 'esbJgUBXLvcorLZRnsyjRWMDFEnpZWVI' : 'Sakshi@sql123';
+const defaultDb = isVercel ? 'railway' : 'blogverse_db';
+
+const host = process.env.DB_HOST || defaultHost;
+const port = parseInt(process.env.DB_PORT || String(defaultPort));
+const user = process.env.DB_USER || defaultUser;
+const password = process.env.DB_PASSWORD !== undefined && process.env.DB_PASSWORD !== '' ? process.env.DB_PASSWORD : defaultPassword;
+const database = process.env.DB_NAME || defaultDb;
+
+const isCloudDb = host && !host.includes('localhost') && !host.includes('127.0.0.1');
 
 const pool = mysql.createPool({
-  host: process.env.DB_HOST || 'localhost',
-  user: process.env.DB_USER || 'root',
-  password: process.env.DB_PASSWORD !== undefined ? process.env.DB_PASSWORD : 'Sakshi@sql123',
-  database: process.env.DB_NAME || 'blogverse_db',
-  port: parseInt(process.env.DB_PORT || '3306'),
+  host,
+  user,
+  password,
+  database,
+  port,
   ssl: isCloudDb ? { rejectUnauthorized: false } : undefined,
   waitForConnections: true,
   connectionLimit: 10,
