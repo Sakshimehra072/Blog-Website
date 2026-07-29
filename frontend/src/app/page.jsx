@@ -183,8 +183,21 @@ export default function HomePage() {
     };
 
     const handleBlogDeleted = (data) => {
+      if (data && data.blogId) {
+        setBlogs(prev => prev.filter(b => String(b.id) !== String(data.blogId)));
+      }
       loadBlogs(false);
     };
+
+    const handleCustomBlogDeleted = (e) => {
+      const deletedId = e.detail?.blogId;
+      if (deletedId) {
+        setBlogs(prev => prev.filter(b => String(b.id) !== String(deletedId)));
+        loadBlogs(false);
+      }
+    };
+
+    window.addEventListener('app:blog_deleted', handleCustomBlogDeleted);
 
     const handleBlogUpdated = (data) => {
       loadBlogs(false);
@@ -224,6 +237,7 @@ export default function HomePage() {
     socket.on('blog:liked', handleBlogLiked);
 
     return () => {
+      window.removeEventListener('app:blog_deleted', handleCustomBlogDeleted);
       socket.off('blog:published', handleBlogPublished);
       socket.off('blog:deleted', handleBlogDeleted);
       socket.off('blog:updated', handleBlogUpdated);

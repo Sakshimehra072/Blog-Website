@@ -203,15 +203,15 @@ export async function deleteBlogFromDb(blogId) {
     try { await pool.query('DELETE FROM comments WHERE blog_id = ?', [bId]); } catch (e) {}
     try { await pool.query('DELETE FROM likes WHERE blog_id = ?', [bId]); } catch (e) {}
     try { await pool.query('DELETE FROM favourites WHERE blog_id = ?', [bId]); } catch (e) {}
-    await pool.query('DELETE FROM blogs WHERE id = ? OR id = ?', [bId, String(blogId)]);
+    const [res] = await pool.query('DELETE FROM blogs WHERE id = ? OR id = ?', [bId, String(blogId)]);
     await pool.query('SET FOREIGN_KEY_CHECKS = 1');
     console.log(`✅ Deleted blog ID ${blogId} from MySQL database.`);
+    return true;
   } catch (err) {
     console.error('MySQL deleteBlogFromDb error:', err);
     try { await pool.query('SET FOREIGN_KEY_CHECKS = 1'); } catch (e) {}
+    throw new Error(`Failed to delete blog ID ${blogId} from database: ${err.message}`);
   }
-
-  return true;
 }
 
 // 6. Update blog post
