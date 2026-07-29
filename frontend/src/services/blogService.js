@@ -119,9 +119,9 @@ export async function fetchBlogsApi(category = null, page = 1, limit = 100) {
     } catch (err) { }
   }
 
-  // Merge server blogs with locally published blogs fallback if server didn't respond
+  // Use server blogs when server responds; only fallback to localStorage if server is offline/unreachable
   let combined = [...serverBlogs];
-  if (!serverResponded || combined.length === 0) {
+  if (!serverResponded) {
     const localBlogs = getLocalStorageBlogs();
     const blogsMap = new Map();
 
