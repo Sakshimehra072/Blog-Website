@@ -100,7 +100,7 @@ export async function fetchBlogsApi(category = null, page = 1, limit = 100) {
       if (category && category !== 'All') {
         url += `&category=${encodeURIComponent(category)}`;
       }
-      const res = await fetch(url);
+      const res = await fetch(url, { cache: 'no-store' });
       const data = await parseJsonResponse(res);
 
       if (data && data.success) {
