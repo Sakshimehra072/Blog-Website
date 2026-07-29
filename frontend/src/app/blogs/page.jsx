@@ -85,20 +85,33 @@ export default function BlogsPage() {
 
     if (res && res.success && Array.isArray(res.data)) {
       setBlogs(res.data);
-      if (res.categoryCounts) {
-        const countsObj = res.categoryCounts;
-        setCategoriesList(BASE_CATEGORIES.map(cat => {
-          if (cat.id === 'All') {
-            const allVal = countsObj['All'] !== undefined ? countsObj['All'] : countsObj['all'];
-            return { ...cat, count: typeof allVal === 'number' ? allVal : 0 };
-          }
-          const matchKey = Object.keys(countsObj).find(k => k.toLowerCase() === cat.name.toLowerCase());
-          return {
-            ...cat,
-            count: matchKey ? countsObj[matchKey] : 0
-          };
-        }));
-      }
+      const countsObj = res.categoryCounts || {};
+
+      const blogListTally = {};
+      res.data.forEach(b => {
+        if (b.category) {
+          const cKey = b.category.trim();
+          blogListTally[cKey] = (blogListTally[cKey] || 0) + 1;
+        }
+      });
+
+      setCategoriesList(BASE_CATEGORIES.map(cat => {
+        if (cat.id === 'All') {
+          const allVal = countsObj['All'] !== undefined ? countsObj['All'] : (countsObj['all'] !== undefined ? countsObj['all'] : (res.totalBlogs || res.data.length));
+          return { ...cat, count: typeof allVal === 'number' ? allVal : res.data.length };
+        }
+
+        const matchKey = Object.keys(countsObj).find(k => k.toLowerCase() === cat.name.toLowerCase());
+        const tallyMatchKey = Object.keys(blogListTally).find(k => k.toLowerCase() === cat.name.toLowerCase());
+
+        const serverCount = matchKey ? countsObj[matchKey] : 0;
+        const tallyCount = tallyMatchKey ? blogListTally[tallyMatchKey] : 0;
+
+        return {
+          ...cat,
+          count: Math.max(serverCount, tallyCount)
+        };
+      }));
     } else if (Array.isArray(res)) {
       setBlogs(res);
     } else {

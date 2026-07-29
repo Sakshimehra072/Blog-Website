@@ -56,7 +56,7 @@ export default function Modal({ isOpen, onClose, initialMode = 'login', title, m
   const handleSuccessRedirect = () => {
     setTimeout(() => {
       onClose();
-      const targetUrl = redirectUrl || '/write';
+      const targetUrl = redirectUrl || '/';
       if (typeof window !== 'undefined') {
         window.location.href = targetUrl;
       }

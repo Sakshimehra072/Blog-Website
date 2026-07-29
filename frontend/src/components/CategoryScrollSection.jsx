@@ -123,7 +123,7 @@ export default function CategoryScrollSection({
           {categories.map((cat) => (
             <div
               key={cat.id}
-              className="flex-shrink-0 w-[calc((100%-1*0.5rem)/2)] sm:w-[calc((100%-3*0.5rem)/4)] md:w-[calc((100%-5*0.5rem)/6)] lg:w-[calc((100%-7*0.5rem)/8)]"
+              className="flex-shrink-0 w-[135px] sm:w-[150px] md:w-[160px]"
             >
               <CategoryCard
                 category={cat}

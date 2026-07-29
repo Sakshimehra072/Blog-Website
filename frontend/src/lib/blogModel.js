@@ -203,7 +203,18 @@ export async function getCategoryCountsFromDb() {
   try {
     const [totalRows] = await pool.query('SELECT COUNT(*) as total FROM blogs');
     countsMap['All'] = totalRows.length > 0 ? Number(totalRows[0].total) : 0;
-  } catch (err) {}
+
+    const [rows] = await pool.query('SELECT category, COUNT(*) as count FROM blogs WHERE category IS NOT NULL GROUP BY category');
+    if (Array.isArray(rows)) {
+      rows.forEach(r => {
+        if (r.category) {
+          countsMap[r.category] = Number(r.count);
+        }
+      });
+    }
+  } catch (err) {
+    console.error('getCategoryCountsFromDb error:', err);
+  }
 
   return countsMap;
 }
