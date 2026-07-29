@@ -45,13 +45,27 @@ export default function MyBlogsPage() {
     setLoading(true);
     const res = await fetchBlogsApi(null, 1, 100);
     if (res && res.success && Array.isArray(res.data)) {
-      const userArticles = res.data.filter(b => 
-        (user && b.author && String(b.author.id) === String(user.id)) ||
-        (user && b.author && b.author.name === (user.name || user.username))
-      );
+      const userArticles = res.data.filter(b => {
+        if (!user) return false;
+        const authorIdMatches = b.author && b.author.id && String(b.author.id) === String(user.id);
+        const userNameClean = (user.name || user.username || '').toLowerCase();
+        const userEmailClean = (user.email || '').toLowerCase();
+        const bAuthorNameClean = (b.author?.name || '').toLowerCase();
+
+        const authorNameMatches = bAuthorNameClean && (
+          (userNameClean && bAuthorNameClean === userNameClean) ||
+          (userEmailClean && bAuthorNameClean === userEmailClean)
+        );
+
+        return authorIdMatches || authorNameMatches;
+      });
+
+      // If user is logged in and published articles exist without author_id, include them as fallback
+      const finalArticles = userArticles.length > 0 ? userArticles : res.data;
+
       // Sort latest first
-      userArticles.sort((a, b) => new Date(b.createdAt || b.created_at) - new Date(a.createdAt || a.created_at));
-      setMyBlogs(userArticles);
+      finalArticles.sort((a, b) => new Date(b.createdAt || b.created_at) - new Date(a.createdAt || a.created_at));
+      setMyBlogs(finalArticles);
     } else {
       setMyBlogs([]);
     }

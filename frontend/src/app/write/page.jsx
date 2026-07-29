@@ -121,8 +121,9 @@ export default function CreateBlogPage() {
       category,
       coverImage: coverImageUrl || previewImage || 'https://images.unsplash.com/photo-1555066931-4365d14bab8c?w=800&auto=format&fit=crop&q=80',
       description: description.trim(),
-      authorName: user?.name || user?.username || 'Registered Author',
-      authorAvatar: user?.avatar_url || null
+      authorId: user?.id || null,
+      authorName: user?.name || user?.username || user?.email || 'Registered Author',
+      authorAvatar: user?.avatar_url || user?.profile_image || null
     };
 
     const res = await createBlogApi(payload);
