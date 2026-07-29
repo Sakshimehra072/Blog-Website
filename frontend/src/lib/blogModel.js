@@ -1,22 +1,26 @@
-
 import pool from './db';
 
+function generateSlug(title) {
+  const base = (title || 'blog').toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/(^-|-$)/g, '');
+  return `${base}-${Date.now().toString(36)}`;
+}
+
 // Helper to format consistent Blog JSON payload
-function formatBlogResponse(b) {
+function formatBlogResponse(b, defaultCategory = 'Technology') {
   const likesCount = typeof b.real_likes_count === 'number' ? Number(b.real_likes_count) : (b.likes_count || b.likes || 0);
   const commentsCount = typeof b.real_comments_count === 'number' ? Number(b.real_comments_count) : (b.comments_count || b.comments || 0);
 
   return {
     id: b.id,
     title: b.title,
-    category: b.category,
+    category: b.category || b.category_name || defaultCategory || 'Technology',
     coverImage: b.cover_image || b.coverImage,
     description: b.description || b.excerpt,
     excerpt: b.description ? (b.description.slice(0, 140) + '...') : '',
     author: {
-      id: b.author_id,
-      name: b.live_author_name || b.author_name || (b.author ? b.author.name : 'Registered Author'),
-      avatar: b.live_author_avatar || b.author_avatar || (b.author ? b.author.avatar : null)
+      id: b.user_id || b.author_id,
+      name: b.live_author_name || b.username || b.author_name || (b.author ? b.author.name : 'Registered Author'),
+      avatar: b.live_author_avatar || b.profile_image || b.author_avatar || (b.author ? b.author.avatar : null)
     },
     readTime: b.read_time || b.readTime || '5 min read',
     likes: likesCount,
@@ -25,7 +29,7 @@ function formatBlogResponse(b) {
   };
 }
 
-// 1. Create a new blog post directly in MySQL
+// 1. Create a new blog post directly in MySQL (Adaptive for all DB schemas)
 export async function createBlogInDb({ title, category, coverImage, description, authorId, authorName, authorAvatar, readTime }) {
   if (!title || !category || !description) {
     throw new Error('Title, category, and description are required.');
@@ -34,30 +38,46 @@ export async function createBlogInDb({ title, category, coverImage, description,
   const cleanReadTime = readTime || '5 min read';
   const cleanCoverImage = coverImage || 'https://images.unsplash.com/photo-1499750310107-5fef28a66643?w=800&auto=format&fit=crop&q=80';
   const cleanAuthorName = authorName || 'Registered Author';
+  const slug = generateSlug(title);
 
   let result;
   try {
+    // Try Schema Option 1 (Railway production schema: user_id, slug, status)
     const [res] = await pool.query(
-      `INSERT INTO blogs (title, category, cover_image, description, author_id, author_name, author_avatar, read_time, created_at)
-       VALUES (?, ?, ?, ?, ?, ?, ?, ?, NOW())`,
+      `INSERT INTO blogs (title, slug, description, cover_image, user_id, read_time, status)
+       VALUES (?, ?, ?, ?, ?, ?, 'published')`,
       [
         title.trim(),
-        category.trim(),
-        cleanCoverImage,
+        slug,
         description.trim(),
+        cleanCoverImage,
         authorId || null,
-        cleanAuthorName,
-        authorAvatar || null,
         cleanReadTime
       ]
     );
     result = res;
-  } catch (dbErr) {
-    console.error('MySQL createBlogInDb Connection Error:', dbErr);
-    if (dbErr.code === 'ECONNREFUSED') {
-      throw new Error('Database connection refused (ECONNREFUSED). Please verify your MySQL server or Railway environment variables.');
+  } catch (err1) {
+    try {
+      // Try Schema Option 2 (Legacy schema: category, author_id, author_name)
+      const [res] = await pool.query(
+        `INSERT INTO blogs (title, category, cover_image, description, author_id, author_name, author_avatar, read_time, created_at)
+         VALUES (?, ?, ?, ?, ?, ?, ?, ?, NOW())`,
+        [
+          title.trim(),
+          category.trim(),
+          cleanCoverImage,
+          description.trim(),
+          authorId || null,
+          cleanAuthorName,
+          authorAvatar || null,
+          cleanReadTime
+        ]
+      );
+      result = res;
+    } catch (err2) {
+      console.error('MySQL createBlogInDb Error:', err2);
+      throw new Error(err2.message || 'Failed to insert blog post into database.');
     }
-    throw new Error(dbErr.message || 'Failed to insert blog post into database.');
   }
 
   const insertedId = result.insertId;
@@ -65,7 +85,7 @@ export async function createBlogInDb({ title, category, coverImage, description,
   // Fetch inserted row from database to ensure exact schema response
   const [rows] = await pool.query('SELECT * FROM blogs WHERE id = ?', [insertedId]);
   if (rows && rows.length > 0) {
-    return formatBlogResponse(rows[0]);
+    return formatBlogResponse(rows[0], category);
   }
 
   return formatBlogResponse({
@@ -95,11 +115,6 @@ export async function getBlogsFromDb({ category = null, page = 1, limit = 100 })
     // Total count query
     let countQuery = `SELECT COUNT(*) as total FROM blogs`;
     const countParams = [];
-    if (category && category.trim() && category !== 'All') {
-      countQuery += ` WHERE LOWER(category) = LOWER(?)`;
-      countParams.push(category.trim());
-    }
-
     const [countRows] = await pool.query(countQuery, countParams);
     if (countRows && countRows.length > 0) {
       totalBlogs = Number(countRows[0].total);
@@ -111,18 +126,12 @@ export async function getBlogsFromDb({ category = null, page = 1, limit = 100 })
         SELECT b.*, 
                (SELECT COUNT(*) FROM comments WHERE blog_id = b.id) as real_comments_count,
                (SELECT COUNT(*) FROM likes WHERE blog_id = b.id) as real_likes_count,
-               u.name as live_author_name, 
-               u.avatar_url as live_author_avatar 
+               u.username as live_author_name, 
+               u.profile_image as live_author_avatar 
         FROM blogs b 
-        LEFT JOIN users u ON b.author_id = u.id
+        LEFT JOIN users u ON (b.user_id = u.id OR b.author_id = u.id)
       `;
       const params = [];
-
-      if (category && category.trim() && category !== 'All') {
-        query += ` WHERE LOWER(b.category) = LOWER(?)`;
-        params.push(category.trim());
-      }
-
       query += ` ORDER BY b.created_at DESC LIMIT ${limitNum} OFFSET ${offset}`;
 
       const [rows] = await pool.query(query, params);
@@ -130,15 +139,8 @@ export async function getBlogsFromDb({ category = null, page = 1, limit = 100 })
         blogs = rows.map(r => formatBlogResponse(r));
       }
     } catch (subErr) {
-      // Resilient fallback query if subqueries or user JOIN encounters missing tables
-      let fallbackQuery = `SELECT * FROM blogs`;
-      const fallbackParams = [];
-      if (category && category.trim() && category !== 'All') {
-        fallbackQuery += ` WHERE LOWER(category) = LOWER(?)`;
-        fallbackParams.push(category.trim());
-      }
-      fallbackQuery += ` ORDER BY created_at DESC LIMIT ${limitNum} OFFSET ${offset}`;
-      const [rows] = await pool.query(fallbackQuery, fallbackParams);
+      let fallbackQuery = `SELECT * FROM blogs ORDER BY created_at DESC LIMIT ${limitNum} OFFSET ${offset}`;
+      const [rows] = await pool.query(fallbackQuery);
       if (Array.isArray(rows)) {
         blogs = rows.map(r => formatBlogResponse(r));
       }
@@ -165,17 +167,17 @@ export async function getBlogByIdFromDb(blogId) {
       `SELECT b.*, 
               (SELECT COUNT(*) FROM comments WHERE blog_id = b.id) as real_comments_count,
               (SELECT COUNT(*) FROM likes WHERE blog_id = b.id) as real_likes_count,
-              u.name as live_author_name, 
-              u.avatar_url as live_author_avatar 
+              u.username as live_author_name, 
+              u.profile_image as live_author_avatar 
        FROM blogs b 
-       LEFT JOIN users u ON b.author_id = u.id 
+       LEFT JOIN users u ON (b.user_id = u.id OR b.author_id = u.id) 
        WHERE b.id = ?`,
       [bId]
     );
     if (rows.length > 0) {
       return formatBlogResponse(rows[0]);
     }
-  } catch (err) { }
+  } catch (err) {}
 
   return null;
 }
@@ -187,14 +189,7 @@ export async function getCategoryCountsFromDb() {
   try {
     const [totalRows] = await pool.query('SELECT COUNT(*) as total FROM blogs');
     countsMap['All'] = totalRows.length > 0 ? Number(totalRows[0].total) : 0;
-
-    const [rows] = await pool.query('SELECT category, COUNT(*) as count FROM blogs GROUP BY category');
-    rows.forEach(r => {
-      if (r.category) {
-        countsMap[r.category] = Number(r.count);
-      }
-    });
-  } catch (err) { }
+  } catch (err) {}
 
   return countsMap;
 }
@@ -208,7 +203,7 @@ export async function deleteBlogFromDb(blogId) {
     await pool.query('DELETE FROM comments WHERE blog_id = ?', [bId]);
     await pool.query('DELETE FROM likes WHERE blog_id = ?', [bId]);
     await pool.query('DELETE FROM favourites WHERE blog_id = ?', [bId]);
-  } catch (err) { }
+  } catch (err) {}
 
   return true;
 }
@@ -220,11 +215,11 @@ export async function updateBlogInDb(blogId, { title, category, coverImage, desc
   try {
     await pool.query(
       `UPDATE blogs 
-       SET title = ?, category = ?, cover_image = ?, description = ?, updated_at = NOW() 
+       SET title = ?, cover_image = ?, description = ?, updated_at = NOW() 
        WHERE id = ?`,
-      [title, category, coverImage, description, bId]
+      [title, coverImage, description, bId]
     );
-  } catch (err) { }
+  } catch (err) {}
 
   return await getBlogByIdFromDb(blogId);
 }
