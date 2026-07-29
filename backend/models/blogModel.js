@@ -416,12 +416,13 @@ function formatBlogResponse(b) {
       displayName = b.author_name;
     } else if (b.author && b.author.name && b.author.name.toLowerCase() !== 'registered author') {
       displayName = b.author.name;
-    } else if (b.email) {
-      displayName = b.email.split('@')[0];
+    } else if (b.email || b.live_author_email) {
+      const em = b.live_author_email || b.email;
+      displayName = em.split('@')[0];
     }
   }
   if (!displayName || displayName === 'Registered Author' || displayName.toLowerCase() === 'registered author') {
-    displayName = 'Sakshi';
+    displayName = 'Anonymous Author';
   }
 
   return {
