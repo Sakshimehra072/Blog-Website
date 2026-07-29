@@ -34,20 +34,30 @@ export async function createBlogInDb({ title, category, coverImage, description,
   const cleanCoverImage = coverImage || 'https://images.unsplash.com/photo-1499750310107-5fef28a66643?w=800&auto=format&fit=crop&q=80';
   const cleanAuthorName = authorName || 'Registered Author';
 
-  const [result] = await pool.query(
-    `INSERT INTO blogs (title, category, cover_image, description, author_id, author_name, author_avatar, read_time, created_at)
-     VALUES (?, ?, ?, ?, ?, ?, ?, ?, NOW())`,
-    [
-      title.trim(),
-      category.trim(),
-      cleanCoverImage,
-      description.trim(),
-      authorId || null,
-      cleanAuthorName,
-      authorAvatar || null,
-      cleanReadTime
-    ]
-  );
+  let result;
+  try {
+    const [res] = await pool.query(
+      `INSERT INTO blogs (title, category, cover_image, description, author_id, author_name, author_avatar, read_time, created_at)
+       VALUES (?, ?, ?, ?, ?, ?, ?, ?, NOW())`,
+      [
+        title.trim(),
+        category.trim(),
+        cleanCoverImage,
+        description.trim(),
+        authorId || null,
+        cleanAuthorName,
+        authorAvatar || null,
+        cleanReadTime
+      ]
+    );
+    result = res;
+  } catch (dbErr) {
+    console.error('MySQL createBlogInDb Connection Error:', dbErr);
+    if (dbErr.code === 'ECONNREFUSED') {
+      throw new Error('Database connection refused (ECONNREFUSED). Please verify your MySQL server or Railway environment variables.');
+    }
+    throw new Error(dbErr.message || 'Failed to insert blog post into database.');
+  }
 
   const insertedId = result.insertId;
 
