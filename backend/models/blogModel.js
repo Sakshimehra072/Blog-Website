@@ -31,7 +31,12 @@ function writePersistentBlogs(blogs) {
 const memoryBlogsFallback = [];
 const inMemoryLikes = [];
 
-// 1. Create a new blog post directly in MySQL
+function generateSlug(title) {
+  const base = (title || 'blog').toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/(^-|-$)/g, '');
+  return `${base}-${Date.now().toString(36)}`;
+}
+
+// 1. Create a new blog post directly in MySQL (Adaptive schema)
 async function createBlogInDb({ title, category, coverImage, description, authorId, authorName, authorAvatar, readTime }) {
   if (!title || !category || !description) {
     throw new Error('Title, category, and description are required.');
@@ -40,21 +45,47 @@ async function createBlogInDb({ title, category, coverImage, description, author
   const cleanReadTime = readTime || '5 min read';
   const cleanCoverImage = coverImage || 'https://images.unsplash.com/photo-1499750310107-5fef28a66643?w=800&auto=format&fit=crop&q=80';
   const cleanAuthorName = authorName || 'Registered Author';
+  const slug = generateSlug(title);
 
-  const [result] = await pool.query(
-    `INSERT INTO blogs (title, category, cover_image, description, author_id, author_name, author_avatar, read_time, created_at)
-     VALUES (?, ?, ?, ?, ?, ?, ?, ?, NOW())`,
-    [
-      title.trim(),
-      category.trim(),
-      cleanCoverImage,
-      description.trim(),
-      authorId || null,
-      cleanAuthorName,
-      authorAvatar || null,
-      cleanReadTime
-    ]
-  );
+  let result;
+  try {
+    // Try Schema Option 1 (Railway production schema: user_id, slug, status)
+    const [res] = await pool.query(
+      `INSERT INTO blogs (title, slug, description, cover_image, user_id, read_time, status)
+       VALUES (?, ?, ?, ?, ?, ?, 'published')`,
+      [
+        title.trim(),
+        slug,
+        description.trim(),
+        cleanCoverImage,
+        authorId || null,
+        cleanReadTime
+      ]
+    );
+    result = res;
+  } catch (err1) {
+    try {
+      // Try Schema Option 2 (Legacy schema: category, author_id, author_name)
+      const [res] = await pool.query(
+        `INSERT INTO blogs (title, category, cover_image, description, author_id, author_name, author_avatar, read_time, created_at)
+         VALUES (?, ?, ?, ?, ?, ?, ?, ?, NOW())`,
+        [
+          title.trim(),
+          category.trim(),
+          cleanCoverImage,
+          description.trim(),
+          authorId || null,
+          cleanAuthorName,
+          authorAvatar || null,
+          cleanReadTime
+        ]
+      );
+      result = res;
+    } catch (err2) {
+      console.error('MySQL backend createBlogInDb Error:', err2);
+      throw new Error(err2.message || 'Failed to insert blog post into database.');
+    }
+  }
 
   const insertedId = result.insertId;
 
