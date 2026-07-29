@@ -208,7 +208,7 @@ export default function BlogsPage() {
   const paginatedBlogs = filteredBlogs.slice((page - 1) * ITEMS_PER_PAGE, page * ITEMS_PER_PAGE);
 
   return (
-    <div className="min-h-screen flex flex-col justify-between bg-slate-50">
+    <div className="min-h-screen flex flex-col justify-between bg-[#FFFFC5]">
       <Header onOpenAuthModal={handleOpenAuthModal} />
 
       <main className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-10 flex-1 w-full space-y-10">
@@ -221,11 +221,11 @@ export default function BlogsPage() {
             </div>
             
             <h1 className="text-3xl sm:text-4xl font-extrabold tracking-tight text-slate-900">
-              Explore All <span className="text-[#ff9432]">Blogs & Essays</span>
+              Explore All <span className="text-[#ff9432]">Stories & Topics</span>
             </h1>
 
             <p className="text-slate-600 text-xs sm:text-sm font-normal leading-relaxed">
-              Browse through our complete catalog of engineering essays, technology guides, design thoughts, and cultural commentary published by authors worldwide.
+              Browse through our complete collection of stories, personal experiences, expert insights, and essays across all topics published by authors worldwide.
             </p>
           </div>
         </section>

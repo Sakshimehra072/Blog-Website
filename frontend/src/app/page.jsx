@@ -279,7 +279,7 @@ export default function HomePage() {
   const displayedBlogs = filteredBlogs.slice(0, displayLimit);
 
   return (
-    <div className="min-h-screen flex flex-col justify-between bg-slate-50">
+    <div className="min-h-screen flex flex-col justify-between bg-[#FFFFC5]">
       <Header onOpenAuthModal={handleOpenAuthModal} onFocusSearch={scrollToSearch} />
 
       {/* Floating Success Toast */}
@@ -300,11 +300,11 @@ export default function HomePage() {
             </div>
 
             <h1 className="text-3xl sm:text-5xl font-extrabold tracking-tight text-slate-900 leading-tight">
-              Stories, Insights & <span className="text-[#ff9432]">Engineering Essays</span>.
+              Stories, Insights & <span className="text-[#ff9432]">Diverse Perspectives</span>.
             </h1>
 
             <p className="text-slate-600 text-sm sm:text-base leading-relaxed max-w-2xl font-normal">
-              BlogVerse is an independent platform for registered authors sharing genuine perspectives on tech, code, design, and culture.
+              BlogVerse is an open publishing platform for readers and writers to share knowledge, stories, and insights on any topic — from technology, lifestyle, and business to art, health, and philosophy.
             </p>
 
             <div className="pt-2 flex flex-wrap items-center gap-3">

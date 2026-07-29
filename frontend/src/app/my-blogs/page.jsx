@@ -189,7 +189,7 @@ export default function MyBlogsPage() {
   };
 
   return (
-    <div className="min-h-screen flex flex-col justify-between bg-slate-50">
+    <div className="min-h-screen flex flex-col justify-between bg-[#FFFFC5]">
       <Header onOpenAuthModal={handleOpenAuthModal} />
 
       {/* Toast Notification */}
@@ -214,7 +214,7 @@ export default function MyBlogsPage() {
             </h1>
 
             <p className="text-slate-600 text-xs sm:text-sm max-w-xl font-normal">
-              Manage all stories, technical guides, and engineering essays published by you.
+              Manage all stories, essays, and articles published by you across every topic.
             </p>
           </div>
 

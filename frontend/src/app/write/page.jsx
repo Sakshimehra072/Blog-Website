@@ -156,7 +156,7 @@ export default function CreateBlogPage() {
   };
 
   return (
-    <div className="min-h-screen flex flex-col justify-between bg-slate-50">
+    <div className="min-h-screen flex flex-col justify-between bg-[#FFFFC5]">
       <Header onOpenAuthModal={handleOpenAuthModal} />
 
       <main className="max-w-3xl mx-auto px-4 sm:px-6 lg:px-8 py-10 flex-1 w-full space-y-6">
@@ -165,7 +165,7 @@ export default function CreateBlogPage() {
         <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4 pb-6 border-b border-slate-300">
           <div>
             <h1 className="text-2xl sm:text-3xl font-extrabold text-slate-900 tracking-tight">Draft New Article</h1>
-            <p className="text-xs text-slate-500 mt-1">Share knowledge, tutorials, and engineering essays.</p>
+            <p className="text-xs text-slate-500 mt-1">Share your knowledge, stories, ideas, and experiences across any topic with the world.</p>
           </div>
 
           <div className="flex items-center gap-2.5 w-full sm:w-auto">

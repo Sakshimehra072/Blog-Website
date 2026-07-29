@@ -46,7 +46,7 @@ function saveLocalStorageBlog(blog) {
       excerpt: blog.excerpt || (blog.description ? (blog.description.slice(0, 140) + '...') : ''),
       author: {
         id: blog.author?.id || blog.author_id || null,
-        name: blog.author?.name || blog.author_name || blog.authorName || 'Registered Author',
+        name: blog.author?.name || blog.author_name || blog.authorName || 'Anonymous Author',
         avatar: blog.author?.avatar || blog.author_avatar || blog.authorAvatar || null
       },
       readTime: blog.read_time || blog.readTime || '5 min read',

@@ -10,18 +10,19 @@ function formatBlogResponse(b, defaultCategory = 'Technology') {
   const likesCount = typeof b.real_likes_count === 'number' ? Number(b.real_likes_count) : (b.likes_count || b.likes || 0);
   const commentsCount = typeof b.real_comments_count === 'number' ? Number(b.real_comments_count) : (b.comments_count || b.comments || 0);
 
-  let displayName = b.live_author_name || b.u_username || b.username || b.user_name || b.name;
-  if (!displayName || displayName === 'Registered Author' || displayName.toLowerCase() === 'registered author' || displayName === 'Sakshi') {
-    if (b.author_name && b.author_name.toLowerCase() !== 'registered author' && b.author_name !== 'Sakshi') {
-      displayName = b.author_name;
-    } else if (b.author && b.author.name && b.author.name.toLowerCase() !== 'registered author' && b.author.name !== 'Sakshi') {
+  // Dynamically resolve author username from database (live user JOIN or author fields)
+  let displayName = b.live_author_name || b.u_username || b.username || b.user_name || b.name || b.author_name;
+
+  if (!displayName || displayName === 'Registered Author' || displayName.toLowerCase() === 'registered author') {
+    if (b.author && b.author.name && b.author.name.toLowerCase() !== 'registered author') {
       displayName = b.author.name;
     } else if (b.email || b.live_author_email) {
       const em = b.live_author_email || b.email;
       displayName = em.split('@')[0];
     }
   }
-  if (!displayName || displayName === 'Registered Author' || displayName.toLowerCase() === 'registered author' || displayName === 'Sakshi') {
+
+  if (!displayName || displayName === 'Registered Author' || displayName.toLowerCase() === 'registered author') {
     displayName = 'Anonymous Author';
   }
 

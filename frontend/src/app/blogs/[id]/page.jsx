@@ -129,7 +129,7 @@ export default function BlogDetailsPage({ params }) {
     : 'Recently';
 
   return (
-    <div className="min-h-screen flex flex-col justify-between bg-slate-50">
+    <div className="min-h-screen flex flex-col justify-between bg-[#FFFFC5]">
       {/* Reading Progress Bar */}
       <div 
         className="fixed top-0 left-0 h-0.5 bg-[#ff9432] z-50 transition-all duration-150" 
