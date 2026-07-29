@@ -23,7 +23,10 @@ import {
 } from 'lucide-react';
 
 export default function BlogDetailsPage({ params }) {
-  const blogId = params?.id || '1';
+  const unwrappedParams = React.use ? (params instanceof Promise ? React.use(params) : params) : params;
+  const pathId = typeof window !== 'undefined' ? window.location.pathname.split('/').filter(Boolean).pop() : null;
+  const blogId = unwrappedParams?.id || pathId || '1';
+
   const [blog, setBlog] = useState(null);
   const [loading, setLoading] = useState(true);
   const [relatedBlogs, setRelatedBlogs] = useState([]);
@@ -41,7 +44,10 @@ export default function BlogDetailsPage({ params }) {
   useEffect(() => {
     async function loadData() {
       setLoading(true);
-      const res = await fetchBlogByIdApi(blogId);
+      const currentPathId = typeof window !== 'undefined' ? window.location.pathname.split('/').filter(Boolean).pop() : null;
+      const targetId = (unwrappedParams && unwrappedParams.id) || currentPathId || blogId || '1';
+
+      const res = await fetchBlogByIdApi(targetId);
       if (res && res.success && res.blog) {
         setBlog(res.blog);
         setCommentCount(res.blog.comments || 0);
@@ -50,14 +56,14 @@ export default function BlogDetailsPage({ params }) {
         if (res.blog.category) {
           const relRes = await fetchBlogsApi(res.blog.category, 1, 4);
           if (relRes && relRes.success && Array.isArray(relRes.data)) {
-            setRelatedBlogs(relRes.data.filter(b => String(b.id) !== String(blogId)));
+            setRelatedBlogs(relRes.data.filter(b => String(b.id) !== String(targetId)));
           }
         }
       }
       setLoading(false);
     }
     loadData();
-  }, [blogId]);
+  }, [params, blogId]);
 
   // Join Socket Room for Real-Time Article Sync
   useEffect(() => {
