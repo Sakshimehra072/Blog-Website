@@ -13,7 +13,15 @@ async function fixRailwaySchema() {
 
     console.log('✅ Connected to Railway MySQL.');
 
-    // 1. Add 'category' column to blogs table if it doesn't exist
+    // 1. Change cover_image to LONGTEXT to allow large Base64 image strings
+    try {
+      await conn.query(`ALTER TABLE blogs MODIFY COLUMN cover_image LONGTEXT;`);
+      console.log('✅ Modified `cover_image` column to LONGTEXT.');
+    } catch (e) {
+      console.log('Notice on `cover_image` column:', e.message);
+    }
+
+    // 2. Add 'category' column to blogs table if it doesn't exist
     try {
       await conn.query(`ALTER TABLE blogs ADD COLUMN category VARCHAR(100) DEFAULT 'Technology';`);
       console.log('✅ Added `category` column to blogs table.');

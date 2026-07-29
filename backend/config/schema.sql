@@ -82,7 +82,7 @@ CREATE TABLE IF NOT EXISTS blogs (
   title VARCHAR(255) NOT NULL,
   slug VARCHAR(255) UNIQUE NOT NULL,
   description LONGTEXT NOT NULL,
-  cover_image VARCHAR(500) DEFAULT NULL,
+  cover_image LONGTEXT DEFAULT NULL,
   status ENUM('published', 'draft') DEFAULT 'published',
   likes_count INT DEFAULT 0,
   comments_count INT DEFAULT 0,
